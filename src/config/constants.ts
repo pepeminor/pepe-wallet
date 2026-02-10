@@ -1,0 +1,11 @@
+export const APP_NAME = 'Solana Wallet';
+export const DEFAULT_SLIPPAGE_BPS = 50; // 0.5%
+export const LAMPORTS_PER_SOL = 1_000_000_000;
+export const SOL_DECIMALS = 9;
+export const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+export const ASSOCIATED_TOKEN_PROGRAM_ID = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
+export const NATIVE_SOL_MINT = 'So11111111111111111111111111111111111111112';
+export const KEYSTORE_KEY = 'sol_wallet_keystore';
+export const PASSWORD_SALT_KEY = 'sol_wallet_salt';
+export const PRICE_REFRESH_INTERVAL = 30_000;
+export const BALANCE_REFRESH_INTERVAL = 15_000;

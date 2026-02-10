@@ -1,0 +1,41 @@
+@use 'reset';
+@use 'typography';
+@use 'variables' as *;
+
+html, body, #root {
+  height: 100%;
+  background-color: $bg-primary;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+}
+
+.app-container {
+  width: 100%;
+  max-width: $max-width;
+  min-height: 100%;
+  position: relative;
+  background-color: $bg-primary;
+}
+
+// Wallet adapter overrides
+.wallet-adapter-button {
+  background: $accent-primary !important;
+  border-radius: $radius-sm !important;
+}
+
+// Scrollbar
+body {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $border-color;
+    border-radius: 3px;
+  }
+}
