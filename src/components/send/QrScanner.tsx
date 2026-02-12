@@ -20,8 +20,7 @@ export function QrScanner({ onScan }: QrScannerProps) {
   // Start scanner after overlay mounts
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure DOM element is painted
-      const timer = setTimeout(() => startScanner(), 100);
+      const timer = setTimeout(() => startScanner(), 150);
       return () => clearTimeout(timer);
     }
   }, [isOpen, startScanner]);
@@ -43,12 +42,12 @@ export function QrScanner({ onScan }: QrScannerProps) {
             position: 'fixed',
             inset: 0,
             zIndex: 1300,
-            bgcolor: 'rgba(0, 0, 0, 0.92)',
+            bgcolor: 'rgba(0, 0, 0, 0.95)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            px: 3,
+            px: 2,
           }}
         >
           {/* Close button */}
@@ -69,24 +68,31 @@ export function QrScanner({ onScan }: QrScannerProps) {
             Scan QR Code
           </Typography>
 
-          {/* Camera view */}
+          {/* Camera view — square, large */}
           <Box
             id={SCANNER_ID}
             sx={{
-              width: '100%',
-              maxWidth: 300,
-              maxHeight: 252,
+              width: 'calc(100vw - 48px)',
+              maxWidth: 360,
               aspectRatio: '1',
               borderRadius: 3,
               overflow: 'hidden',
-              '& video': { borderRadius: 3 },
+              '& video': {
+                borderRadius: 3,
+                objectFit: 'cover',
+              },
+              // Hide default html5-qrcode UI clutter
+              '& #qr-shaded-region': {
+                borderColor: 'rgba(60, 176, 67, 0.5) !important',
+              },
+              '& img[alt="Info icon"]': { display: 'none' },
             }}
           />
 
           {/* Warning */}
           <Typography
             variant="caption"
-            sx={{ color: 'rgba(255,255,255,0.45)', textAlign: 'center', maxWidth: 280 }}
+            sx={{ mt: 2, color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: 300 }}
           >
             Only scan QR codes from sources you trust. Malicious codes may lead to loss of funds.
           </Typography>

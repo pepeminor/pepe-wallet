@@ -17,7 +17,14 @@ export function useQrScanner(
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        {
+          fps: 15,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8);
+            return { width: size, height: size };
+          },
+          aspectRatio: 1,
+        },
         (decodedText) => {
           onResult(decodedText);
           stop();
@@ -37,6 +44,7 @@ export function useQrScanner(
     if (scannerRef.current) {
       try {
         await scannerRef.current.stop();
+        scannerRef.current.clear();
       } catch {
         // already stopped
       }
