@@ -1,15 +1,19 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import {
   Box,
-  TextField,
   Button,
   Typography,
   Alert,
   Chip,
 } from '@mui/material';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { useStore } from '@/store';
 import { useSendTransaction } from '@/hooks/useSendTransaction';
-import { AmountInput } from '@/components/common/AmountInput';
+import { ValidatedInput } from '@/components/common/ValidatedInput';
 import { TokenSelector } from './TokenSelector';
 import { QrScanner } from './QrScanner';
 import { TokenIcon } from '@/components/common/TokenIcon';
@@ -21,14 +25,51 @@ interface SendFormProps {
   initialMint?: string;
 }
 
+interface SendFormValues {
+  recipient: string;
+  amount: string;
+}
+
+const createSendSchema = (maxBalance: number) =>
+  yup.object({
+    recipient: yup
+      .string()
+      .required('Address is required')
+      .test('solana-address', 'Invalid Solana address', (v) =>
+        v ? isValidSolanaAddress(v) : false
+      ),
+    amount: yup
+      .string()
+      .required('Amount is required')
+      .test('positive', 'Must be greater than 0', (v) => {
+        const n = parseFloat(v || '');
+        return !isNaN(n) && n > 0;
+      })
+      .test('max-balance', `Exceeds balance (max ${maxBalance})`, (v) => {
+        const n = parseFloat(v || '');
+        return !isNaN(n) && n <= maxBalance;
+      }),
+  });
+
 export function SendForm({ initialMint }: SendFormProps) {
   const balances = useStore((s) => s.balances);
   const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null);
-  const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
   const [selectorOpen, setSelectorOpen] = useState(false);
 
   const { send, sending, txSignature, error } = useSendTransaction();
+
+  const maxBalance = selectedToken?.uiBalance ?? 0;
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { isValid },
+  } = useForm<SendFormValues>({
+    resolver: yupResolver(createSendSchema(maxBalance)),
+    defaultValues: { recipient: '', amount: '' },
+    mode: 'onChange',
+  });
 
   useEffect(() => {
     if (balances.length > 0 && !selectedToken) {
@@ -39,26 +80,22 @@ export function SendForm({ initialMint }: SendFormProps) {
     }
   }, [balances, initialMint, selectedToken]);
 
-  const handleSend = () => {
-    if (!selectedToken || !recipient || !amount) return;
-
+  const onSubmit = (data: SendFormValues) => {
+    if (!selectedToken) return;
     send({
-      to: recipient,
-      amount: parseFloat(amount),
+      to: data.recipient,
+      amount: parseFloat(data.amount),
       mint: selectedToken.token.mint,
       decimals: selectedToken.token.decimals,
     });
   };
 
-  const isValid =
-    recipient &&
-    isValidSolanaAddress(recipient) &&
-    amount &&
-    parseFloat(amount) > 0 &&
-    parseFloat(amount) <= (selectedToken?.uiBalance ?? 0);
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, p: 2 }}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, p: 2 }}
+    >
       <Typography variant="h6" sx={{ fontWeight: 700 }}>
         Send Token
       </Typography>
@@ -90,29 +127,55 @@ export function SendForm({ initialMint }: SendFormProps) {
           <Typography variant="caption" color="text.secondary">
             Recipient
           </Typography>
-          <QrScanner onScan={setRecipient} />
+          <QrScanner onScan={(address) => setValue('recipient', address, { shouldValidate: true })} />
         </Box>
-        <TextField
+        <ValidatedInput<SendFormValues>
+          name="recipient"
+          control={control}
           fullWidth
           placeholder="Solana address"
-          value={recipient}
-          onChange={(e) => setRecipient(e.target.value)}
-          error={!!recipient && !isValidSolanaAddress(recipient)}
-          helperText={
-            recipient && !isValidSolanaAddress(recipient)
-              ? 'Invalid address'
-              : ''
-          }
         />
       </Box>
 
       {/* Amount */}
-      <AmountInput
-        value={amount}
-        onChange={setAmount}
-        maxAmount={selectedToken?.uiBalance}
-        tokenSymbol={selectedToken?.token.symbol}
-      />
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+          <Typography variant="caption" color="text.secondary">
+            Amount
+          </Typography>
+          {maxBalance > 0 && (
+            <Typography variant="caption" color="text.secondary">
+              Balance: {maxBalance.toLocaleString()}{' '}
+              <Button
+                size="small"
+                onClick={() => setValue('amount', maxBalance.toString(), { shouldValidate: true })}
+                sx={{ minWidth: 'auto', p: 0, fontSize: '11px', textTransform: 'uppercase' }}
+              >
+                MAX
+              </Button>
+            </Typography>
+          )}
+        </Box>
+        <ValidatedInput<SendFormValues>
+          name="amount"
+          control={control}
+          fullWidth
+          placeholder="0.00"
+          InputProps={{
+            endAdornment: selectedToken ? (
+              <Typography color="text.secondary" sx={{ fontWeight: 600 }}>
+                {selectedToken.token.symbol}
+              </Typography>
+            ) : undefined,
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              fontSize: '20px',
+              fontWeight: 600,
+            },
+          }}
+        />
+      </Box>
 
       {error && <Alert severity="error">{error}</Alert>}
 
@@ -129,8 +192,8 @@ export function SendForm({ initialMint }: SendFormProps) {
         fullWidth
         variant="contained"
         size="large"
-        onClick={handleSend}
-        disabled={!isValid || sending}
+        type="submit"
+        disabled={!isValid || sending || !selectedToken}
       >
         {sending ? 'Sending...' : 'Send'}
       </Button>

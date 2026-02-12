@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export function useQrScanner(
   elementId: string,
   onResult: (text: string) => void
 ) {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  const start = async () => {
+  const startScanner = useCallback(async () => {
     if (scannerRef.current) return;
 
     const scanner = new Html5Qrcode(elementId);
@@ -22,14 +22,16 @@ export function useQrScanner(
           onResult(decodedText);
           stop();
         },
-        () => {} // ignore errors during scanning
+        () => {}
       );
-      setIsScanning(true);
     } catch (err) {
       console.error('QR scanner failed to start:', err);
       scannerRef.current = null;
+      setIsOpen(false);
     }
-  };
+  }, [elementId, onResult]);
+
+  const open = () => setIsOpen(true);
 
   const stop = async () => {
     if (scannerRef.current) {
@@ -39,8 +41,8 @@ export function useQrScanner(
         // already stopped
       }
       scannerRef.current = null;
-      setIsScanning(false);
     }
+    setIsOpen(false);
   };
 
   useEffect(() => {
@@ -49,5 +51,5 @@ export function useQrScanner(
     };
   }, []);
 
-  return { start, stop, isScanning };
+  return { open, stop, startScanner, isOpen };
 }

@@ -3,8 +3,8 @@ import { ClientProviders } from '@/providers/ClientProviders';
 import './globals.scss';
 
 export const metadata: Metadata = {
-  title: 'Solana Wallet',
-  description: 'Your gateway to Web3',
+  title: 'Pepe Bag',
+  description: 'Gateway to Web3',
 };
 
 export const viewport: Viewport = {

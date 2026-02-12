@@ -43,7 +43,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       >
         <Toolbar sx={{ minHeight: 56 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>
-            Solana Wallet
+            Pepe Bag
           </Typography>
           {activeAccount && (
             <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>

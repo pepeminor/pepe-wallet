@@ -1,6 +1,9 @@
-import { Box, Button, Paper } from '@mui/material';
+'use client';
+
+import { Box, Button, IconButton, Typography } from '@mui/material';
 import { QrCodeScanner, Close } from '@mui/icons-material';
 import { useQrScanner } from '@/hooks/useQrScanner';
+import { useEffect } from 'react';
 
 const SCANNER_ID = 'qr-reader';
 
@@ -9,40 +12,86 @@ interface QrScannerProps {
 }
 
 export function QrScanner({ onScan }: QrScannerProps) {
-  const { start, stop, isScanning } = useQrScanner(SCANNER_ID, (text) => {
-    // Strip solana: prefix if present
+  const { open, stop, startScanner, isOpen } = useQrScanner(SCANNER_ID, (text) => {
     const address = text.replace(/^solana:/, '');
     onScan(address);
   });
 
+  // Start scanner after overlay mounts
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM element is painted
+      const timer = setTimeout(() => startScanner(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, startScanner]);
+
   return (
-    <Box>
-      {!isScanning ? (
-        <Button
-          variant="outlined"
-          startIcon={<QrCodeScanner />}
-          onClick={start}
-          size="small"
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<QrCodeScanner />}
+        onClick={open}
+        size="small"
+      >
+        Scan QR
+      </Button>
+
+      {isOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1300,
+            bgcolor: 'rgba(0, 0, 0, 0.92)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: 3,
+          }}
         >
-          Scan QR
-        </Button>
-      ) : (
-        <Paper sx={{ p: 1, position: 'relative' }}>
+          {/* Close button */}
+          <IconButton
+            onClick={stop}
+            sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              color: 'rgba(255,255,255,0.7)',
+            }}
+          >
+            <Close />
+          </IconButton>
+
+          {/* Title */}
+          <Typography variant="subtitle1" fontWeight={600} color="white" sx={{ mb: 2 }}>
+            Scan QR Code
+          </Typography>
+
+          {/* Camera view */}
           <Box
             id={SCANNER_ID}
-            sx={{ width: '100%', borderRadius: 1, overflow: 'hidden' }}
+            sx={{
+              width: '100%',
+              maxWidth: 300,
+              maxHeight: 252,
+              aspectRatio: '1',
+              borderRadius: 3,
+              overflow: 'hidden',
+              '& video': { borderRadius: 3 },
+            }}
           />
-          <Button
-            variant="text"
-            startIcon={<Close />}
-            onClick={stop}
-            size="small"
-            sx={{ mt: 1 }}
+
+          {/* Warning */}
+          <Typography
+            variant="caption"
+            sx={{ color: 'rgba(255,255,255,0.45)', textAlign: 'center', maxWidth: 280 }}
           >
-            Close Scanner
-          </Button>
-        </Paper>
+            Only scan QR codes from sources you trust. Malicious codes may lead to loss of funds.
+          </Typography>
+        </Box>
       )}
-    </Box>
+    </>
   );
 }

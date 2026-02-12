@@ -16,7 +16,7 @@ export const createChainSlice: StateCreator<ChainSlice, [], [], ChainSlice> = (
   get
 ) => ({
   activeChainId: ChainId.Solana,
-  network: NetworkType.Devnet,
+  network: NetworkType.Mainnet,
 
   setActiveChain: (activeChainId) => set({ activeChainId }),
   setNetwork: (network) => set({ network }),

@@ -1,5 +1,5 @@
 {
-  "name": "solana-web3-wallet",
+  "name": "pepe-bag",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,6 +13,7 @@
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@hookform/resolvers": "^5.2.2",
     "@mui/icons-material": "^5.15.14",
     "@mui/material": "^5.15.14",
     "@solana/spl-token": "^0.4.6",
@@ -35,8 +36,10 @@
     "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.71.1",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5",
+    "yup": "^1.7.1",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

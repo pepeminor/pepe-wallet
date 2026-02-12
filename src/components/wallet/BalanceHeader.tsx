@@ -1,11 +1,12 @@
-import { Box, Typography } from '@mui/material';
+import { Box, IconButton, Typography } from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 import { useStore } from '@/store';
 import { usePrices } from '@/hooks/usePrices';
 import { formatUsd } from '@/utils/format';
 
 export function BalanceHeader() {
   const balances = useStore((s) => s.balances);
-  const prices = usePrices();
+  const { prices, refresh, refreshing, cooldown } = usePrices();
 
   const totalUsd = balances.reduce((sum, b) => {
     const price = prices[b.token.mint]?.priceUsd ?? 0;
@@ -17,17 +18,37 @@ export function BalanceHeader() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
         Total Balance
       </Typography>
-      <Typography
-        variant="h3"
-        sx={{
-          fontWeight: 800,
-          background: 'linear-gradient(135deg, #7b61ff, #00d4aa)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-      >
-        {formatUsd(totalUsd)}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+        <Typography
+          variant="h3"
+          sx={{
+            fontWeight: 800,
+            background: '#3CB043',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          {formatUsd(totalUsd)}
+        </Typography>
+        <IconButton
+          onClick={refresh}
+          disabled={cooldown || refreshing}
+          size="small"
+          sx={{
+            color: 'text.secondary',
+            transition: 'all 0.3s',
+            '& svg': {
+              animation: refreshing ? 'spin 1s linear infinite' : 'none',
+            },
+            '@keyframes spin': {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' },
+            },
+          }}
+        >
+          <Refresh fontSize="small" />
+        </IconButton>
+      </Box>
     </Box>
   );
 }

@@ -17,15 +17,15 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         sx={{
           fontWeight: 800,
           mb: 1,
-          background: 'linear-gradient(135deg, #7b61ff, #00d4aa)',
+          background: 'linear-gradient(135deg, #3CB043, #7AE582)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}
       >
-        Solana Wallet
+        Pepe Bag
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Your gateway to Web3
+        Your degen gateway to Web3
       </Typography>
       <Box sx={{ width: '100%', maxWidth: 400 }}>{children}</Box>
     </Box>

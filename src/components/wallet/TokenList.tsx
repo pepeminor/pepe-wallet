@@ -14,7 +14,7 @@ import { formatBalance, formatUsd } from '@/utils/format';
 
 export function TokenList() {
   const balances = useStore((s) => s.balances);
-  const prices = usePrices();
+  const { prices } = usePrices();
   const router = useRouter();
 
   if (balances.length === 0) {

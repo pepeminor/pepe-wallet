@@ -5,8 +5,8 @@ import { createTheme } from '@mui/material/styles';
 export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
-    primary: { main: '#7b61ff' },
-    secondary: { main: '#00d4aa' },
+    primary: { main: '#3CB043' },
+    secondary: { main: '#7AE582' },
     background: {
       default: '#0d1117',
       paper: '#21262d',
@@ -35,9 +35,11 @@ export const darkTheme = createTheme({
           fontSize: '14px',
         },
         containedPrimary: {
-          background: 'linear-gradient(135deg, #7b61ff, #00d4aa)',
+          background: 'linear-gradient(135deg, #3CB043, #7AE582)',
+          color: '#0d1117',
+          fontWeight: 700,
           '&:hover': {
-            background: 'linear-gradient(135deg, #6b51ef, #00c49a)',
+            background: 'linear-gradient(135deg, #2E9335, #6AD572)',
           },
         },
       },
@@ -80,7 +82,7 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           color: '#8b949e',
-          '&.Mui-selected': { color: '#7b61ff' },
+          '&.Mui-selected': { color: '#3CB043' },
         },
       },
     },
