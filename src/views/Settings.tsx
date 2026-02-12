@@ -27,7 +27,7 @@ import {
   VisibilityOff,
   ContentCopy,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/store';
 import { NetworkType } from '@/types/chain';
 import { clearKeystore, loadKeystore } from '@/services/keystore';
@@ -35,7 +35,7 @@ import { copyToClipboard } from '@/utils/clipboard';
 import { AddressDisplay } from '@/components/common/AddressDisplay';
 
 export function SettingsPage() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const network = useStore((s) => s.network);
   const setNetwork = useStore((s) => s.setNetwork);
   const activeAccount = useStore((s) => s.activeAccount);
@@ -99,7 +99,7 @@ export function SettingsPage() {
     clearKeystore();
     reset();
     setResetDialogOpen(false);
-    navigate('/onboarding', { replace: true });
+    router.replace('/onboarding');
   };
 
   return (

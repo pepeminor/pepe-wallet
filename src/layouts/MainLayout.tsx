@@ -1,4 +1,6 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+'use client';
+
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
   BottomNavigation,
@@ -23,13 +25,13 @@ const NAV_ITEMS = [
   { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
 
-export function MainLayout() {
-  const navigate = useNavigate();
-  const location = useLocation();
+export function MainLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const activeAccount = useStore((s) => s.activeAccount);
 
   const currentNav = NAV_ITEMS.findIndex((item) =>
-    location.pathname.startsWith(item.path)
+    pathname.startsWith(item.path)
   );
 
   return (
@@ -52,12 +54,12 @@ export function MainLayout() {
       </AppBar>
 
       <Box sx={{ flex: 1, overflow: 'auto', pb: '64px' }}>
-        <Outlet />
+        {children}
       </Box>
 
       <BottomNavigation
         value={currentNav}
-        onChange={(_, idx) => navigate(NAV_ITEMS[idx].path)}
+        onChange={(_, idx) => router.push(NAV_ITEMS[idx].path)}
         sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, maxWidth: 480, mx: 'auto' }}
       >
         {NAV_ITEMS.map((item) => (

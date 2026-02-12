@@ -6,7 +6,7 @@ import {
   Typography,
   Box,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/store';
 import { usePrices } from '@/hooks/usePrices';
 import { TokenIcon } from '@/components/common/TokenIcon';
@@ -15,7 +15,7 @@ import { formatBalance, formatUsd } from '@/utils/format';
 export function TokenList() {
   const balances = useStore((s) => s.balances);
   const prices = usePrices();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   if (balances.length === 0) {
     return (
@@ -34,7 +34,7 @@ export function TokenList() {
         return (
           <ListItem
             key={b.token.mint}
-            onClick={() => navigate(`/send/${b.token.mint}`)}
+            onClick={() => router.push(`/send/${b.token.mint}`)}
             sx={{
               borderRadius: 2,
               mb: 0.5,

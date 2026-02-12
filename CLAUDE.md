@@ -5,18 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 ```bash
-npm run dev       # Start Vite dev server
-npm run build     # TypeScript compile + Vite production build
-npm run preview   # Preview production build
+npm run dev       # Start Next.js dev server (webpack mode)
+npm run build     # Next.js production build (webpack mode)
+npm run start     # Start production server
 npm run lint      # ESLint check
 npm run lint:fix  # ESLint auto-fix
 ```
 
-ESLint 9 with flat config (`eslint.config.js`): typescript-eslint, react-hooks, react-refresh. No test runner or formatter configured.
+ESLint 9 with flat config (`eslint.config.js`): typescript-eslint, react-hooks. No test runner or formatter configured.
 
 ## Architecture Overview
 
-Client-side Solana wallet app built with React 18 + TypeScript + Vite. No backend — all crypto operations, storage, and API calls happen in the browser.
+Client-side Solana wallet app built with Next.js 16 App Router + React 18 + TypeScript. No backend — all crypto operations, storage, and API calls happen in the browser. All components use `'use client'` directive.
 
 ### State Management
 
@@ -24,11 +24,13 @@ Zustand store with modular slices (`walletSlice`, `chainSlice`, `uiSlice`, `swap
 
 ### Routing & Guards
 
-React Router v6 with two guards in `src/router/routes.tsx`:
-- `AuthGuard` — redirects to `/onboarding` if wallet not initialized
-- `OnboardingGuard` — redirects to `/dashboard` if already initialized
+Next.js App Router with file-based routing in `app/` directory:
+- `src/guards/AuthGuard.tsx` — redirects to `/onboarding` if wallet not initialized
+- `src/guards/OnboardingGuard.tsx` — redirects to `/dashboard` if already initialized
+- `app/(protected)/` — route group wrapping authenticated pages with AuthGuard + MainLayout
+- `app/onboarding/` — wraps with OnboardingGuard + AuthLayout
 
-Routes: `/onboarding`, `/dashboard`, `/send/:tokenMint?`, `/receive`, `/swap/:inputMint?/:outputMint?`, `/history`, `/settings`.
+Routes: `/onboarding`, `/dashboard`, `/send/[tokenMint]?`, `/receive`, `/swap/[inputMint]?/[outputMint]?`, `/history`, `/settings`.
 
 ### Chain Provider Architecture
 
@@ -52,7 +54,10 @@ Solana services: `SolanaConnection` (RPC), `SolanaTokenService` (balances), `Sol
 
 ## Key Conventions
 
-- Path alias: `@/` maps to `src/` (configured in both `vite.config.ts` and `tsconfig.json`)
-- Vite polyfills buffer, process, crypto, stream, util for Solana web3.js compatibility
+- Path alias: `@/` maps to `src/` (configured in `tsconfig.json`)
+- Webpack polyfills buffer, process, crypto, stream, util for Solana web3.js compatibility (client-side only, configured in `next.config.js`)
+- Solana packages listed in `serverExternalPackages` to avoid SSR issues
+- Providers loaded via `next/dynamic` with `ssr: false` in `src/providers/ClientProviders.tsx`
 - MUI v5 with custom dark theme (`src/theme/muiTheme.ts`), SCSS for global styles
-- `bip39` v3 wordlists may not load in Vite's ESM bundler — avoid `validateMnemonic()` without explicitly passing the wordlist; prefer try-catching derivation functions instead
+- Page components live in `src/views/` (not `src/pages/` to avoid Next.js Pages Router conflict)
+- `bip39` v3 wordlists may not load in ESM bundler — avoid `validateMnemonic()` without explicitly passing the wordlist; prefer try-catching derivation functions instead

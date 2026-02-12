@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'next/navigation';
 import { Typography, Box } from '@mui/material';
 import { SwapCard } from '@/components/swap/SwapCard';
 import { useStore } from '@/store';
@@ -7,7 +9,9 @@ import { DEFAULT_TOKENS } from '@/config/tokens';
 import { ChainId } from '@/types/chain';
 
 export function SwapPage() {
-  const { inputMint, outputMint } = useParams();
+  const params = useParams();
+  const inputMint = params?.inputMint as string | undefined;
+  const outputMint = params?.outputMint as string | undefined;
   const setInputToken = useStore((s) => s.setInputToken);
   const setOutputToken = useStore((s) => s.setOutputToken);
 

@@ -4,10 +4,10 @@ import {
   ArrowDownward,
   SwapHoriz,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 
 export function ActionButtons() {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const actions = [
     { label: 'Send', icon: <ArrowUpward />, path: '/send' },
@@ -21,7 +21,7 @@ export function ActionButtons() {
         <Button
           key={action.label}
           variant="outlined"
-          onClick={() => navigate(action.path)}
+          onClick={() => router.push(action.path)}
           sx={{
             flex: 1,
             flexDirection: 'column',

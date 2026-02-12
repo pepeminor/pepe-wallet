@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Box, Tabs, Tab, Paper } from '@mui/material';
 import { SetPasswordForm } from '@/components/onboarding/SetPasswordForm';
 import { GenerateWalletForm } from '@/components/onboarding/GenerateWalletForm';
@@ -11,12 +11,12 @@ import { useChainInit } from '@/hooks/useChain';
 export function OnboardingPage() {
   useChainInit();
 
-  const navigate = useNavigate();
+  const router = useRouter();
   const [tab, setTab] = useState(0);
   const [password, setPassword] = useState<string | null>(null);
 
   const handleSuccess = () => {
-    navigate('/dashboard', { replace: true });
+    router.replace('/dashboard');
   };
 
   if (!password) {

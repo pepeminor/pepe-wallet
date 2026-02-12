@@ -1,0 +1,10 @@
+'use client';
+
+import { useParams } from 'next/navigation';
+import { SendForm } from '@/components/send/SendForm';
+
+export function SendPage() {
+  const params = useParams();
+  const tokenMint = params?.tokenMint as string | undefined;
+  return <SendForm initialMint={tokenMint} />;
+}
