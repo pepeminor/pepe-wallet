@@ -7,8 +7,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint && eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint": "eslint src/ app/",
+    "lint:fix": "eslint src/ app/ --fix"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",

@@ -80,10 +80,8 @@ export function QrScanner({ onScan }: QrScannerProps) {
               '& video': {
                 borderRadius: 3,
                 objectFit: 'cover',
-              },
-              // Hide default html5-qrcode UI clutter
-              '& #qr-shaded-region': {
-                borderColor: 'rgba(60, 176, 67, 0.5) !important',
+                width: '100% !important',
+                height: '100% !important',
               },
               '& img[alt="Info icon"]': { display: 'none' },
             }}

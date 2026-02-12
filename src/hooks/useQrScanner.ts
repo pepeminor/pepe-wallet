@@ -17,14 +17,7 @@ export function useQrScanner(
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        {
-          fps: 15,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8);
-            return { width: size, height: size };
-          },
-          aspectRatio: 1,
-        },
+        { fps: 15, aspectRatio: 1, disableFlip: false },
         (decodedText) => {
           onResult(decodedText);
           stop();
