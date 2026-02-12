@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { WalletSlice, createWalletSlice } from './walletSlice';
 import { ChainSlice, createChainSlice } from './chainSlice';
 import { UiSlice, createUiSlice } from './uiSlice';
@@ -11,10 +12,24 @@ export type AppStore = WalletSlice &
   SwapSlice &
   TransactionSlice;
 
-export const useStore = create<AppStore>()((...a) => ({
-  ...createWalletSlice(...a),
-  ...createChainSlice(...a),
-  ...createUiSlice(...a),
-  ...createSwapSlice(...a),
-  ...createTransactionSlice(...a),
-}));
+export const useStore = create<AppStore>()(
+  persist(
+    (...a) => ({
+      ...createWalletSlice(...a),
+      ...createChainSlice(...a),
+      ...createUiSlice(...a),
+      ...createSwapSlice(...a),
+      ...createTransactionSlice(...a),
+    }),
+    {
+      name: 'wallet-storage',
+      partialize: (state) => ({
+        mode: state.mode,
+        accounts: state.accounts,
+        activeAccount: state.activeAccount,
+        isInitialized: state.isInitialized,
+        isLocked: true,
+      }),
+    }
+  )
+);
