@@ -31,6 +31,7 @@ export function GenerateWalletForm({ password, onSuccess }: GenerateWalletFormPr
   const setActiveAccount = useStore((s) => s.setActiveAccount);
   const setInitialized = useStore((s) => s.setInitialized);
   const setSecretKey = useStore((s) => s.setSecretKey);
+  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
   const setLocked = useStore((s) => s.setLocked);
 
   const handleGenerate = async () => {
@@ -38,10 +39,12 @@ export function GenerateWalletForm({ password, onSuccess }: GenerateWalletFormPr
     try {
       const wallet = generateWallet();
       setMnemonic(wallet.mnemonic);
-      await saveKeystore(wallet.secretKeyBase58, password);
+      // Store mnemonic in keystore so both keys can be re-derived on unlock
+      await saveKeystore(wallet.mnemonic, password);
 
       const account: WalletAccount = {
         address: wallet.publicKey,
+        evmAddress: wallet.evmAddress,
         label: 'New Wallet',
         mode: WalletMode.Generated,
         createdAt: Date.now(),
@@ -51,6 +54,7 @@ export function GenerateWalletForm({ password, onSuccess }: GenerateWalletFormPr
       addAccount(account);
       setActiveAccount(account);
       setSecretKey(wallet.secretKeyBase58);
+      setEvmPrivateKey(wallet.evmPrivateKey);
     } catch (err) {
       console.error('Failed to generate wallet:', err);
     } finally {
@@ -79,7 +83,7 @@ export function GenerateWalletForm({ password, onSuccess }: GenerateWalletFormPr
         </Box>
 
         <Typography variant="body2" color="text.secondary">
-          Generate a new Solana wallet with a recovery phrase.
+          Generate a new multi-chain wallet with a recovery phrase.
         </Typography>
 
         <Button

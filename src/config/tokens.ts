@@ -1,6 +1,6 @@
 import { TokenInfo } from '@/types/token';
 import { ChainId } from '@/types/chain';
-import { NATIVE_SOL_MINT } from './constants';
+import { NATIVE_SOL_MINT, NATIVE_ETH_MINT } from './constants';
 
 export const DEFAULT_TOKENS: Record<ChainId, TokenInfo[]> = {
   [ChainId.Solana]: [
@@ -29,6 +29,102 @@ export const DEFAULT_TOKENS: Record<ChainId, TokenInfo[]> = {
       decimals: 6,
       icon: '/tokens/usdt.svg',
       chainId: ChainId.Solana,
+      isNative: false,
+    },
+  ],
+  [ChainId.Ethereum]: [
+    {
+      mint: NATIVE_ETH_MINT,
+      symbol: 'ETH',
+      name: 'Ethereum',
+      decimals: 18,
+      icon: '/tokens/eth.svg',
+      chainId: ChainId.Ethereum,
+      isNative: true,
+    },
+    {
+      mint: '0x6982508145454Ce325dDbE47a25d4ec3d2311933',
+      symbol: 'PEPE',
+      name: 'Pepe',
+      decimals: 18,
+      icon: '/tokens/pepe.svg',
+      chainId: ChainId.Ethereum,
+      isNative: false,
+    },
+    {
+      mint: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      symbol: 'USDT',
+      name: 'Tether USD',
+      decimals: 6,
+      icon: '/tokens/usdt.svg',
+      chainId: ChainId.Ethereum,
+      isNative: false,
+    },
+    {
+      mint: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      icon: '/tokens/usdc.svg',
+      chainId: ChainId.Ethereum,
+      isNative: false,
+    },
+  ],
+  [ChainId.Base]: [
+    {
+      mint: NATIVE_ETH_MINT,
+      symbol: 'ETH',
+      name: 'Ethereum',
+      decimals: 18,
+      icon: '/tokens/eth.svg',
+      chainId: ChainId.Base,
+      isNative: true,
+    },
+    {
+      mint: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      icon: '/tokens/usdc.svg',
+      chainId: ChainId.Base,
+      isNative: false,
+    },
+    {
+      mint: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+      symbol: 'USDT',
+      name: 'Tether USD',
+      decimals: 6,
+      icon: '/tokens/usdt.svg',
+      chainId: ChainId.Base,
+      isNative: false,
+    },
+  ],
+  [ChainId.Arbitrum]: [
+    {
+      mint: NATIVE_ETH_MINT,
+      symbol: 'ETH',
+      name: 'Ethereum',
+      decimals: 18,
+      icon: '/tokens/eth.svg',
+      chainId: ChainId.Arbitrum,
+      isNative: true,
+    },
+    {
+      mint: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      icon: '/tokens/usdc.svg',
+      chainId: ChainId.Arbitrum,
+      isNative: false,
+    },
+    {
+      mint: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+      symbol: 'USDT',
+      name: 'Tether USD',
+      decimals: 6,
+      icon: '/tokens/usdt.svg',
+      chainId: ChainId.Arbitrum,
       isNative: false,
     },
   ],

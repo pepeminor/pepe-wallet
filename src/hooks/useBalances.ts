@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useStore } from '@/store';
 import { useChainProvider } from './useChain';
 import { DEFAULT_TOKENS } from '@/config/tokens';
-import { BALANCE_REFRESH_INTERVAL } from '@/config/constants';
+import { BALANCE_REFRESH_INTERVAL, isEvmChain } from '@/config/constants';
 import { TokenBalance } from '@/types/token';
 
 export function useBalances() {
@@ -14,10 +14,17 @@ export function useBalances() {
   const provider = useChainProvider();
 
   const fetchBalances = useCallback(async () => {
-    if (!activeAccount?.address || !provider) return;
+    if (!activeAccount || !provider) return;
+
+    // Use the correct address for the active chain
+    const address = isEvmChain(activeChainId)
+      ? activeAccount.evmAddress
+      : activeAccount.address;
+
+    if (!address) return;
 
     try {
-      const chainBalances = await provider.getTokenBalances(activeAccount.address);
+      const chainBalances = await provider.getTokenBalances(address);
       const defaultTokens = DEFAULT_TOKENS[activeChainId] ?? [];
 
       const tokenBalances: TokenBalance[] = chainBalances.map((b) => {
@@ -41,7 +48,7 @@ export function useBalances() {
     } catch (err) {
       console.error('Failed to fetch balances:', err);
     }
-  }, [activeAccount?.address, provider, activeChainId, setBalances]);
+  }, [activeAccount, provider, activeChainId, setBalances]);
 
   useEffect(() => {
     fetchBalances();

@@ -21,6 +21,7 @@ export function ImportSeedForm({ password, onSuccess }: ImportSeedFormProps) {
   const setActiveAccount = useStore((s) => s.setActiveAccount);
   const setInitialized = useStore((s) => s.setInitialized);
   const setSecretKey = useStore((s) => s.setSecretKey);
+  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
   const setLocked = useStore((s) => s.setLocked);
 
   const handleImport = async () => {
@@ -40,20 +41,23 @@ export function ImportSeedForm({ password, onSuccess }: ImportSeedFormProps) {
     setError('');
 
     try {
-      const { publicKey, secretKeyBase58 } = restoreFromMnemonic(trimmed);
-      await saveKeystore(secretKeyBase58, password);
+      const wallet = restoreFromMnemonic(trimmed);
+      // Store mnemonic so both keys can be re-derived on unlock
+      await saveKeystore(trimmed, password);
 
       const account: WalletAccount = {
-        address: publicKey,
+        address: wallet.publicKey,
+        evmAddress: wallet.evmAddress,
         label: 'Restored Wallet',
-        mode: WalletMode.PrivateKey,
+        mode: WalletMode.Generated,
         createdAt: Date.now(),
       };
 
-      setMode(WalletMode.PrivateKey);
+      setMode(WalletMode.Generated);
       addAccount(account);
       setActiveAccount(account);
-      setSecretKey(secretKeyBase58);
+      setSecretKey(wallet.secretKeyBase58);
+      setEvmPrivateKey(wallet.evmPrivateKey);
       setInitialized(true);
       setLocked(false);
       onSuccess();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Box,
   Typography,
@@ -16,7 +16,8 @@ import {
   Divider,
   TextField,
   Alert,
-} from '@mui/material';
+  IconButton,
+} from "@mui/material";
 import {
   Language,
   Tune,
@@ -26,57 +27,125 @@ import {
   Visibility,
   VisibilityOff,
   ContentCopy,
-} from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
-import { useStore } from '@/store';
-import { NetworkType } from '@/types/chain';
-import { clearKeystore, loadKeystore } from '@/services/keystore';
-import { copyToClipboard } from '@/utils/clipboard';
-import { AddressDisplay } from '@/components/common/AddressDisplay';
+  AddCircle,
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
+import { useStore } from "@/store";
+import { NetworkType } from "@/types/chain";
+import {
+  clearKeystore,
+  loadKeystore,
+  isMnemonic,
+  hasKeystore,
+  hasEvmKeystore,
+  loadEvmKeystore,
+  saveKeystore,
+  saveEvmKeystore,
+} from "@/services/keystore";
+import {
+  restoreFromMnemonic,
+  importFromPrivateKey,
+} from "@/services/walletGenerator";
+import { copyToClipboard } from "@/utils/clipboard";
+import { AddressDisplay } from "@/components/common/AddressDisplay";
+import { isEvmChain } from "@/config/constants";
+import { ethers } from "ethers";
+
+interface ExportedKeys {
+  mnemonic: string | null;
+  solanaKey: string | null;
+  evmKey: string | null;
+}
 
 export function SettingsPage() {
   const router = useRouter();
   const network = useStore((s) => s.network);
   const setNetwork = useStore((s) => s.setNetwork);
   const activeAccount = useStore((s) => s.activeAccount);
+  const activeChainId = useStore((s) => s.activeChainId);
   const slippageBps = useStore((s) => s.slippageBps);
   const setSlippage = useStore((s) => s.setSlippage);
   const reset = useStore((s) => s.reset);
   const addToast = useStore((s) => s.addToast);
+  const setHasExportedKeys = useStore((s) => s.setHasExportedKeys);
+  const setSecretKey = useStore((s) => s.setSecretKey);
+  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
+  const updateActiveAccount = useStore((s) => s.updateActiveAccount);
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [exportPassword, setExportPassword] = useState('');
-  const [exportedKey, setExportedKey] = useState('');
-  const [exportError, setExportError] = useState('');
-  const [showKey, setShowKey] = useState(false);
+  const [exportPassword, setExportPassword] = useState("");
+  const [exportedKeys, setExportedKeys] = useState<ExportedKeys | null>(null);
+  const [exportError, setExportError] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
+  const [showMnemonic, setShowMnemonic] = useState(false);
+  const [showSolanaKey, setShowSolanaKey] = useState(false);
+  const [showEvmKey, setShowEvmKey] = useState(false);
   const [slippageInput, setSlippageInput] = useState(
-    (slippageBps / 100).toString()
+    (slippageBps / 100).toString(),
   );
+
+  // Import missing chain dialog
+  const [importChainDialog, setImportChainDialog] = useState<
+    "solana" | "evm" | null
+  >(null);
+  const [importPassword, setImportPassword] = useState("");
+  const [importKey, setImportKey] = useState("");
+  const [importError, setImportError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+
+  const isEvm = isEvmChain(activeChainId);
+  const missingSolana = activeAccount && !activeAccount.address;
+  const missingEvm = activeAccount && !activeAccount.evmAddress;
 
   const handleNetworkChange = (newNetwork: NetworkType) => {
     setNetwork(newNetwork);
-    addToast({ type: 'info', message: `Switched to ${newNetwork}` });
+    addToast({ type: "info", message: `Switched to ${newNetwork}` });
   };
 
   const handleSlippageChange = () => {
     const val = parseFloat(slippageInput);
     if (!isNaN(val) && val > 0 && val <= 50) {
       setSlippage(Math.round(val * 100));
-      addToast({ type: 'success', message: `Slippage set to ${val}%` });
+      addToast({ type: "success", message: `Slippage set to ${val}%` });
     }
   };
 
   const handleExportKey = async () => {
     if (!exportPassword.trim()) return;
     setExportLoading(true);
-    setExportError('');
+    setExportError("");
     try {
-      const key = await loadKeystore(exportPassword);
-      setExportedKey(key);
+      let solanaKey: string | null = null;
+      let evmKey: string | null = null;
+      let mnemonic: string | null = null;
+
+      // Load main keystore
+      if (hasKeystore()) {
+        const decrypted = await loadKeystore(exportPassword);
+        if (isMnemonic(decrypted)) {
+          mnemonic = decrypted;
+          const wallet = restoreFromMnemonic(decrypted);
+          solanaKey = wallet.secretKeyBase58;
+          evmKey = wallet.evmPrivateKey;
+        } else {
+          solanaKey = decrypted;
+        }
+      }
+
+      // Load separate EVM keystore if exists
+      if (hasEvmKeystore()) {
+        try {
+          evmKey = await loadEvmKeystore(exportPassword);
+        } catch {
+          // May fail if different password — skip
+        }
+      }
+
+      setExportedKeys({ mnemonic, solanaKey, evmKey });
+      setHasExportedKeys(true);
     } catch {
-      setExportError('Incorrect password. Please try again.');
+      setExportError("Incorrect password. Please try again.");
     } finally {
       setExportLoading(false);
     }
@@ -84,23 +153,148 @@ export function SettingsPage() {
 
   const handleCloseExportDialog = () => {
     setExportDialogOpen(false);
-    setExportPassword('');
-    setExportedKey('');
-    setExportError('');
-    setShowKey(false);
+    setExportPassword("");
+    setExportedKeys(null);
+    setExportError("");
+    setShowMnemonic(false);
+    setShowSolanaKey(false);
+    setShowEvmKey(false);
   };
 
-  const handleCopyKey = async () => {
-    const ok = await copyToClipboard(exportedKey);
-    if (ok) addToast({ type: 'success', message: 'Private key copied' });
+  const handleCopyAll = async () => {
+    if (!exportedKeys) return;
+    const parts: string[] = [];
+    if (exportedKeys.mnemonic) {
+      parts.push("----------------");
+      parts.push("Recovery Phrase:");
+      parts.push(exportedKeys.mnemonic);
+    }
+    if (exportedKeys.solanaKey) {
+      parts.push("----------------");
+      parts.push("Solana Private Key:");
+      parts.push(exportedKeys.solanaKey);
+    }
+    if (exportedKeys.evmKey) {
+      parts.push("----------------");
+      parts.push("EVM Private Key (Ethereum/Base/Arbitrum):");
+      parts.push(exportedKeys.evmKey);
+    }
+    const ok = await copyToClipboard(parts.join("\n"));
+    if (ok)
+      addToast({ type: "success", message: "All keys copied to clipboard" });
   };
 
   const handleResetWallet = () => {
     clearKeystore();
     reset();
     setResetDialogOpen(false);
-    router.replace('/onboarding');
+    router.replace("/onboarding");
   };
+
+  const handleImportChainKey = async () => {
+    if (!importPassword.trim() || !importKey.trim()) return;
+    setImportLoading(true);
+    setImportError("");
+
+    try {
+      if (importChainDialog === "solana") {
+        const { publicKey, secretKeyBase58 } = importFromPrivateKey(
+          importKey.trim(),
+        );
+        await saveKeystore(secretKeyBase58, importPassword);
+        setSecretKey(secretKeyBase58);
+        updateActiveAccount({ address: publicKey });
+        addToast({ type: "success", message: "Solana key imported" });
+      } else if (importChainDialog === "evm") {
+        const trimmedKey = importKey.trim();
+        const wallet = new ethers.Wallet(trimmedKey);
+        await saveEvmKeystore(trimmedKey, importPassword);
+        setEvmPrivateKey(trimmedKey);
+        updateActiveAccount({ evmAddress: wallet.address });
+        addToast({ type: "success", message: "EVM key imported" });
+      }
+      setImportChainDialog(null);
+      setImportPassword("");
+      setImportKey("");
+    } catch {
+      setImportError(
+        importChainDialog === "solana"
+          ? "Invalid Solana private key (Base58)."
+          : "Invalid EVM private key (0x hex).",
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleCloseImportDialog = () => {
+    setImportChainDialog(null);
+    setImportPassword("");
+    setImportKey("");
+    setImportError("");
+  };
+
+  const renderKeySection = (
+    label: string,
+    value: string,
+    show: boolean,
+    setShow: (v: boolean) => void,
+  ) => (
+    <Box sx={{ mb: 2 }}>
+      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+        {label}
+      </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0.5,
+          p: 1.5,
+          borderRadius: 1,
+          bgcolor: "action.hover",
+          fontFamily: "monospace",
+          fontSize: "0.85rem",
+          wordBreak: "break-all",
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            flex: 1,
+            fontFamily: "monospace",
+            wordBreak: "break-all",
+          }}
+        >
+          {show ? value : "••••••••••••••••••"}
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 0.5,
+            flexShrink: 0,
+          }}
+        >
+          <IconButton size="small" onClick={() => setShow(!show)}>
+            {show ? (
+              <VisibilityOff fontSize="small" />
+            ) : (
+              <Visibility fontSize="small" />
+            )}
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={async () => {
+              const ok = await copyToClipboard(value);
+              if (ok) addToast({ type: "success", message: `${label} copied` });
+            }}
+          >
+            <ContentCopy fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+    </Box>
+  );
 
   return (
     <Box sx={{ p: 2 }}>
@@ -115,37 +309,112 @@ export function SettingsPage() {
             mb: 2,
             borderRadius: 2,
             border: 1,
-            borderColor: 'divider',
+            borderColor: "divider",
           }}
         >
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Active Wallet
+            Wallet Addresses
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
             {activeAccount.label} ({activeAccount.mode})
           </Typography>
-          <AddressDisplay address={activeAccount.address} chars={10} />
+
+          {activeAccount.address ? (
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Solana
+              </Typography>
+              <AddressDisplay address={activeAccount.address} chars={10} />
+            </Box>
+          ) : (
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Solana — not imported
+              </Typography>
+            </Box>
+          )}
+
+          {activeAccount.evmAddress ? (
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                EVM
+              </Typography>
+              <AddressDisplay address={activeAccount.evmAddress} chars={10} />
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                EVM — not imported
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 
       <List>
-        <ListItem>
-          <ListItemIcon>
-            <Language />
-          </ListItemIcon>
-          <ListItemText primary="Network" secondary={network} />
-          <Select
-            value={network}
-            onChange={(e) => handleNetworkChange(e.target.value as NetworkType)}
-            size="small"
-            sx={{ minWidth: 130 }}
-          >
-            <MenuItem value={NetworkType.Devnet}>Devnet</MenuItem>
-            <MenuItem value={NetworkType.Mainnet}>Mainnet</MenuItem>
-          </Select>
-        </ListItem>
+        {/* Import missing chain keys */}
+        {(missingSolana || missingEvm) && (
+          <>
+            {missingSolana && (
+              <ListItem
+                onClick={() => setImportChainDialog("solana")}
+                sx={{
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                <ListItemIcon>
+                  <AddCircle color="primary" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Import Solana Private Key"
+                  secondary="Add Solana support to your wallet"
+                />
+              </ListItem>
+            )}
+            {missingEvm && (
+              <ListItem
+                onClick={() => setImportChainDialog("evm")}
+                sx={{
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                <ListItemIcon>
+                  <AddCircle color="primary" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Import EVM Private Key"
+                  secondary="Add Ethereum/Base/Arbitrum support to your wallet"
+                />
+              </ListItem>
+            )}
+            <Divider />
+          </>
+        )}
 
-        <Divider />
+        {!isEvm && (
+          <>
+            <ListItem>
+              <ListItemIcon>
+                <Language />
+              </ListItemIcon>
+              <ListItemText primary="Network" secondary={network} />
+              <Select
+                value={network}
+                onChange={(e) =>
+                  handleNetworkChange(e.target.value as NetworkType)
+                }
+                size="small"
+                sx={{ minWidth: 130 }}
+              >
+                <MenuItem value={NetworkType.Devnet}>Devnet</MenuItem>
+                <MenuItem value={NetworkType.Mainnet}>Mainnet</MenuItem>
+              </Select>
+            </ListItem>
+            <Divider />
+          </>
+        )}
 
         <ListItem>
           <ListItemIcon>
@@ -155,14 +424,14 @@ export function SettingsPage() {
             primary="Default Slippage"
             secondary={`${(slippageBps / 100).toFixed(1)}%`}
           />
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <TextField
               value={slippageInput}
               onChange={(e) => setSlippageInput(e.target.value)}
               onBlur={handleSlippageChange}
               size="small"
               sx={{ width: 70 }}
-              InputProps={{ endAdornment: '%' }}
+              InputProps={{ endAdornment: "%" }}
             />
           </Box>
         </ListItem>
@@ -171,14 +440,14 @@ export function SettingsPage() {
 
         <ListItem
           onClick={() => setExportDialogOpen(true)}
-          sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+          sx={{ cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
         >
           <ListItemIcon>
             <VpnKey />
           </ListItemIcon>
           <ListItemText
-            primary="Export Private Key"
-            secondary="View and copy your private key"
+            primary="Export Recovery Phrase / Keys"
+            secondary="View and copy your recovery phrase or private keys"
           />
         </ListItem>
 
@@ -188,17 +457,17 @@ export function SettingsPage() {
           <ListItemIcon>
             <Info />
           </ListItemIcon>
-          <ListItemText
-            primary="Version"
-            secondary="0.1.0 - Devnet"
-          />
+          <ListItemText primary="Version" secondary="0.1.0" />
         </ListItem>
 
         <Divider />
 
         <ListItem
           onClick={() => setResetDialogOpen(true)}
-          sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'rgba(248,81,73,0.08)' } }}
+          sx={{
+            cursor: "pointer",
+            "&:hover": { bgcolor: "rgba(248,81,73,0.08)" },
+          }}
         >
           <ListItemIcon>
             <DeleteForever color="error" />
@@ -210,6 +479,7 @@ export function SettingsPage() {
         </ListItem>
       </List>
 
+      {/* Reset Dialog */}
       <Dialog open={resetDialogOpen} onClose={() => setResetDialogOpen(false)}>
         <DialogTitle>Reset Wallet?</DialogTitle>
         <DialogContent>
@@ -226,13 +496,21 @@ export function SettingsPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={exportDialogOpen} onClose={handleCloseExportDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Export Private Key</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-          {!exportedKey ? (
+      {/* Export Keys Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={handleCloseExportDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Export Keys</DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}
+        >
+          {!exportedKeys ? (
             <>
               <Typography variant="body2" color="text.secondary">
-                Enter your password to reveal your private key.
+                Enter your password to reveal your keys.
               </Typography>
               <TextField
                 fullWidth
@@ -240,7 +518,7 @@ export function SettingsPage() {
                 label="Password"
                 value={exportPassword}
                 onChange={(e) => setExportPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleExportKey()}
+                onKeyDown={(e) => e.key === "Enter" && handleExportKey()}
                 error={!!exportError}
                 helperText={exportError}
                 autoFocus
@@ -249,41 +527,114 @@ export function SettingsPage() {
           ) : (
             <>
               <Alert severity="warning" sx={{ mt: 1 }}>
-                Never share your private key. Anyone with this key can access your funds.
+                Never share your keys. Anyone with these can access your funds.
               </Alert>
-              <TextField
-                fullWidth
-                multiline={showKey}
-                rows={showKey ? 3 : 1}
-                value={showKey ? exportedKey : '••••••••••••••••••••••••••••'}
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      <Button size="small" onClick={() => setShowKey(!showKey)} sx={{ minWidth: 0, p: 0.5 }}>
-                        {showKey ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                      </Button>
-                      <Button size="small" onClick={handleCopyKey} sx={{ minWidth: 0, p: 0.5 }}>
-                        <ContentCopy fontSize="small" />
-                      </Button>
-                    </Box>
-                  ),
-                }}
-              />
+
+              {exportedKeys.mnemonic &&
+                renderKeySection(
+                  "Recovery Phrase",
+                  exportedKeys.mnemonic,
+                  showMnemonic,
+                  setShowMnemonic,
+                )}
+
+              {exportedKeys.solanaKey &&
+                renderKeySection(
+                  "Solana Private Key",
+                  exportedKeys.solanaKey,
+                  showSolanaKey,
+                  setShowSolanaKey,
+                )}
+
+              {exportedKeys.evmKey &&
+                renderKeySection(
+                  "EVM Private Key (Ethereum/Base/Arbitrum)",
+                  exportedKeys.evmKey,
+                  showEvmKey,
+                  setShowEvmKey,
+                )}
             </>
           )}
         </DialogContent>
         <DialogActions>
+          {exportedKeys && (
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<ContentCopy />}
+              onClick={handleCopyAll}
+            >
+              Copy All
+            </Button>
+          )}
           <Button onClick={handleCloseExportDialog}>Close</Button>
-          {!exportedKey && (
+          {!exportedKeys && (
             <Button
               onClick={handleExportKey}
               variant="contained"
               disabled={exportLoading || !exportPassword.trim()}
             >
-              {exportLoading ? 'Decrypting...' : 'Reveal Key'}
+              {exportLoading ? "Decrypting..." : "Reveal"}
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Import Missing Chain Key Dialog */}
+      <Dialog
+        open={!!importChainDialog}
+        onClose={handleCloseImportDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Import {importChainDialog === "solana" ? "Solana" : "EVM"} Private Key
+        </DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Enter your wallet password and the{" "}
+            {importChainDialog === "solana" ? "Solana (Base58)" : "EVM (0x hex)"}{" "}
+            private key.
+          </Typography>
+
+          <TextField
+            fullWidth
+            type="password"
+            label="Wallet Password"
+            value={importPassword}
+            onChange={(e) => setImportPassword(e.target.value)}
+            autoFocus
+          />
+
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label={
+              importChainDialog === "solana"
+                ? "Solana Private Key (Base58)"
+                : "EVM Private Key (0x...)"
+            }
+            value={importKey}
+            onChange={(e) => setImportKey(e.target.value)}
+            type="password"
+          />
+
+          {importError && <Alert severity="error">{importError}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseImportDialog}>Cancel</Button>
+          <Button
+            onClick={handleImportChainKey}
+            variant="contained"
+            disabled={
+              importLoading || !importPassword.trim() || !importKey.trim()
+            }
+          >
+            {importLoading ? "Importing..." : "Import"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

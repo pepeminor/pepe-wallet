@@ -15,6 +15,7 @@ const nextConfig = {
     'ed25519-hd-key',
     'bip39',
     'bs58',
+    'ethers',
   ],
   turbopack: {
     resolveAlias: {

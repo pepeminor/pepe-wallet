@@ -5,11 +5,12 @@ import { PRICE_REFRESH_INTERVAL } from '@/config/constants';
 
 const MANUAL_REFRESH_COOLDOWN = 15_000; // 15s
 
-// Module-level flag: resets only on full page refresh
-let hasFetchedThisSession = false;
+// Track per-chain whether we've fetched this session
+const fetchedChains = new Set<string>();
 
 export function usePrices() {
   const balances = useStore((s) => s.balances);
+  const activeChainId = useStore((s) => s.activeChainId);
   const prices = useStore((s) => s.prices);
   const setPrices = useStore((s) => s.setPrices);
   const setLastPriceFetch = useStore((s) => s.setLastPriceFetch);
@@ -21,7 +22,7 @@ export function usePrices() {
     if (fetchingRef.current || mints.length === 0) return;
     fetchingRef.current = true;
     try {
-      const result = await getTokenPrices(mints);
+      const result = await getTokenPrices(mints, activeChainId);
       const map: Record<string, { mint: string; priceUsd: number }> = {};
       result.forEach((p) => {
         map[p.mint] = p;
@@ -31,7 +32,7 @@ export function usePrices() {
     } finally {
       fetchingRef.current = false;
     }
-  }, [setPrices, setLastPriceFetch]);
+  }, [setPrices, setLastPriceFetch, activeChainId]);
 
   // Manual refresh with 15s cooldown
   const refresh = useCallback(async () => {
@@ -46,20 +47,14 @@ export function usePrices() {
     setTimeout(() => setCooldown(false), MANUAL_REFRESH_COOLDOWN);
   }, [balances, cooldown, fetchPrices]);
 
-  // Fetch once per page refresh session, skip if already have prices
+  // Fetch once per chain per session, skip if already have prices
   useEffect(() => {
     const mints = balances.map((b) => b.token.mint);
-    if (mints.length === 0 || hasFetchedThisSession) return;
+    if (mints.length === 0 || fetchedChains.has(activeChainId)) return;
 
-    const hasExistingPrices = Object.keys(prices).length > 0;
-    if (hasExistingPrices) {
-      hasFetchedThisSession = true;
-      return;
-    }
-
-    hasFetchedThisSession = true;
+    fetchedChains.add(activeChainId);
     fetchPrices(mints);
-  }, [balances]);
+  }, [balances, activeChainId, fetchPrices]);
 
   // Background refresh every 15 min
   useEffect(() => {

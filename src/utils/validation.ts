@@ -1,4 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
+import { ethers } from 'ethers';
 import bs58 from 'bs58';
 
 export function isValidSolanaAddress(address: string): boolean {
@@ -8,6 +9,10 @@ export function isValidSolanaAddress(address: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function isValidEvmAddress(address: string): boolean {
+  return ethers.isAddress(address);
 }
 
 export function isValidAmount(amount: string, maxBalance: number): boolean {

@@ -5,14 +5,25 @@ import { useState } from 'react';
 import { useStore } from '@/store';
 import { copyToClipboard } from '@/utils/clipboard';
 import { AddressDisplay } from '@/components/common/AddressDisplay';
+import { isEvmChain } from '@/config/constants';
+import { CHAIN_CONFIGS } from '@/config/chains';
 
 export function ReceiveCard() {
   const activeAccount = useStore((s) => s.activeAccount);
+  const activeChainId = useStore((s) => s.activeChainId);
   const [copied, setCopied] = useState(false);
 
   if (!activeAccount) return null;
 
-  const address = activeAccount.address;
+  const isEvm = isEvmChain(activeChainId);
+  const address = isEvm
+    ? activeAccount.evmAddress
+    : activeAccount.address;
+
+  if (!address) return null;
+
+  const chainConfig = CHAIN_CONFIGS[activeChainId];
+  const qrPrefix = isEvm ? 'ethereum:' : 'solana:';
 
   const handleCopy = async () => {
     await copyToClipboard(address);
@@ -31,7 +42,7 @@ export function ReceiveCard() {
       }}
     >
       <Typography variant="h6" sx={{ fontWeight: 700 }}>
-        Receive
+        Receive on {chainConfig.name}
       </Typography>
 
       <Paper
@@ -44,7 +55,7 @@ export function ReceiveCard() {
         }}
       >
         <QRCodeSVG
-          value={`solana:${address}`}
+          value={`${qrPrefix}${address}`}
           size={220}
           level="M"
           includeMargin={false}

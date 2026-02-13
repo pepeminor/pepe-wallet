@@ -18,8 +18,8 @@ import { TokenSelector } from './TokenSelector';
 import { QrScanner } from './QrScanner';
 import { TokenIcon } from '@/components/common/TokenIcon';
 import { TokenBalance } from '@/types/token';
-import { isValidSolanaAddress } from '@/utils/validation';
-import { NATIVE_SOL_MINT } from '@/config/constants';
+import { isValidSolanaAddress, isValidEvmAddress } from '@/utils/validation';
+import { getNativeMint, isEvmChain } from '@/config/constants';
 
 interface SendFormProps {
   initialMint?: string;
@@ -30,13 +30,13 @@ interface SendFormValues {
   amount: string;
 }
 
-const createSendSchema = (maxBalance: number) =>
+const createSendSchema = (maxBalance: number, isEvm: boolean) =>
   yup.object({
     recipient: yup
       .string()
       .required('Address is required')
-      .test('solana-address', 'Invalid Solana address', (v) =>
-        v ? isValidSolanaAddress(v) : false
+      .test('valid-address', isEvm ? 'Invalid EVM address' : 'Invalid Solana address', (v) =>
+        v ? (isEvm ? isValidEvmAddress(v) : isValidSolanaAddress(v)) : false
       ),
     amount: yup
       .string()
@@ -53,12 +53,15 @@ const createSendSchema = (maxBalance: number) =>
 
 export function SendForm({ initialMint }: SendFormProps) {
   const balances = useStore((s) => s.balances);
+  const activeChainId = useStore((s) => s.activeChainId);
+  console.log({activeChainId});
   const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
-
+  console.log({selectedToken});
   const { send, sending, txSignature, error } = useSendTransaction();
 
   const maxBalance = selectedToken?.uiBalance ?? 0;
+  const isEvm = isEvmChain(activeChainId);
 
   const {
     control,
@@ -66,19 +69,25 @@ export function SendForm({ initialMint }: SendFormProps) {
     setValue,
     formState: { isValid },
   } = useForm<SendFormValues>({
-    resolver: yupResolver(createSendSchema(maxBalance)),
+    resolver: yupResolver(createSendSchema(maxBalance, isEvm)),
     defaultValues: { recipient: '', amount: '' },
     mode: 'onChange',
   });
 
   useEffect(() => {
     if (balances.length > 0 && !selectedToken) {
+      const nativeMint = getNativeMint(activeChainId);
       const token = initialMint
         ? balances.find((b) => b.token.mint === initialMint)
-        : balances.find((b) => b.token.mint === NATIVE_SOL_MINT);
+        : balances.find((b) => b.token.mint === nativeMint);
       setSelectedToken(token ?? balances[0]);
     }
-  }, [balances, initialMint, selectedToken]);
+  }, [balances, initialMint, selectedToken, activeChainId]);
+
+  // Reset selected token on chain switch
+  useEffect(() => {
+    setSelectedToken(null);
+  }, [activeChainId]);
 
   const onSubmit = (data: SendFormValues) => {
     if (!selectedToken) return;
@@ -133,7 +142,7 @@ export function SendForm({ initialMint }: SendFormProps) {
           name="recipient"
           control={control}
           fullWidth
-          placeholder="Solana address"
+          placeholder={isEvm ? '0x address' : 'Solana address'}
         />
       </Box>
 

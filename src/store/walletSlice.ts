@@ -10,6 +10,8 @@ export interface WalletSlice {
   isLocked: boolean;
   isInitialized: boolean;
   secretKeyBase58: string | null;
+  evmPrivateKey: string | null;
+  hasExportedKeys: boolean;
 
   setMode: (mode: WalletMode) => void;
   addAccount: (account: WalletAccount) => void;
@@ -18,6 +20,9 @@ export interface WalletSlice {
   setLocked: (locked: boolean) => void;
   setInitialized: (initialized: boolean) => void;
   setSecretKey: (key: string | null) => void;
+  setEvmPrivateKey: (key: string | null) => void;
+  setHasExportedKeys: (exported: boolean) => void;
+  updateActiveAccount: (patch: Partial<WalletAccount>) => void;
   reset: () => void;
 }
 
@@ -29,6 +34,8 @@ const initialState = {
   isLocked: true,
   isInitialized: false,
   secretKeyBase58: null,
+  evmPrivateKey: null,
+  hasExportedKeys: false,
 };
 
 export const createWalletSlice: StateCreator<WalletSlice, [], [], WalletSlice> = (
@@ -44,5 +51,21 @@ export const createWalletSlice: StateCreator<WalletSlice, [], [], WalletSlice> =
   setLocked: (isLocked) => set({ isLocked }),
   setInitialized: (isInitialized) => set({ isInitialized }),
   setSecretKey: (secretKeyBase58) => set({ secretKeyBase58 }),
+  setEvmPrivateKey: (evmPrivateKey) => set({ evmPrivateKey }),
+  setHasExportedKeys: (hasExportedKeys) => set({ hasExportedKeys }),
+  updateActiveAccount: (patch) =>
+    set((state) => {
+      if (!state.activeAccount) return state;
+      const updated = { ...state.activeAccount, ...patch };
+      return {
+        activeAccount: updated,
+        accounts: state.accounts.map((a) =>
+          a.address === state.activeAccount?.address &&
+          a.evmAddress === state.activeAccount?.evmAddress
+            ? updated
+            : a
+        ),
+      };
+    }),
   reset: () => set(initialState),
 });

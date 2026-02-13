@@ -6,6 +6,7 @@ export enum WalletMode {
 
 export interface WalletAccount {
   address: string;
+  evmAddress: string | null;
   label: string;
   mode: WalletMode;
   createdAt: number;

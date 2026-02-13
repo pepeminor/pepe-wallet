@@ -2,11 +2,14 @@ import { Keypair } from '@solana/web3.js';
 import * as bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import bs58 from 'bs58';
+import { ethers } from 'ethers';
 
 export interface GeneratedWallet {
   mnemonic: string;
   publicKey: string;
   secretKeyBase58: string;
+  evmAddress: string;
+  evmPrivateKey: string;
 }
 
 export function generateWallet(): GeneratedWallet {
@@ -19,10 +22,28 @@ export function restoreFromMnemonic(mnemonic: string): GeneratedWallet {
   const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key;
   const keypair = Keypair.fromSeed(derivedSeed);
 
+  const evmWallet = deriveEvmFromMnemonic(mnemonic);
+
   return {
     mnemonic,
     publicKey: keypair.publicKey.toBase58(),
     secretKeyBase58: bs58.encode(keypair.secretKey),
+    evmAddress: evmWallet.address,
+    evmPrivateKey: evmWallet.privateKey,
+  };
+}
+
+export function deriveEvmFromMnemonic(mnemonic: string): {
+  address: string;
+  privateKey: string;
+} {
+  const hdWallet = ethers.HDNodeWallet.fromMnemonic(
+    ethers.Mnemonic.fromPhrase(mnemonic),
+    "m/44'/60'/0'/0/0"
+  );
+  return {
+    address: hdWallet.address,
+    privateKey: hdWallet.privateKey,
   };
 }
 

@@ -24,6 +24,7 @@ export function ConnectWalletPanel({ onSuccess }: ConnectWalletPanelProps) {
     if (connected && publicKey) {
       const account: WalletAccount = {
         address: publicKey.toBase58(),
+        evmAddress: null, // Extension wallets are Solana only
         label: 'Extension Wallet',
         mode: WalletMode.Extension,
         createdAt: Date.now(),

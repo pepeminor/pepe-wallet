@@ -1,10 +1,22 @@
-import { useState } from 'react';
-import { TextField, Button, Box, Typography, Alert } from '@mui/material';
-import { VpnKey } from '@mui/icons-material';
-import { importFromPrivateKey } from '@/services/walletGenerator';
-import { saveKeystore } from '@/services/keystore';
-import { useStore } from '@/store';
-import { WalletMode, WalletAccount } from '@/types/wallet';
+import { useState } from "react";
+import {
+  TextField,
+  Button,
+  Box,
+  Typography,
+  Alert,
+  ToggleButtonGroup,
+  ToggleButton,
+} from "@mui/material";
+import { VpnKey } from "@mui/icons-material";
+import { importFromPrivateKey } from "@/services/walletGenerator";
+import { saveKeystore, saveEvmKeystore } from "@/services/keystore";
+import { useStore } from "@/store";
+import { WalletMode, WalletAccount } from "@/types/wallet";
+import { ChainId } from "@/types/chain";
+import { ethers } from "ethers";
+
+type ChainType = "solana" | "evm";
 
 interface ImportKeyFormProps {
   password: string;
@@ -12,8 +24,9 @@ interface ImportKeyFormProps {
 }
 
 export function ImportKeyForm({ password, onSuccess }: ImportKeyFormProps) {
-  const [privateKey, setPrivateKey] = useState('');
-  const [error, setError] = useState('');
+  const [chainType, setChainType] = useState<ChainType>("solana");
+  const [privateKey, setPrivateKey] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const setMode = useStore((s) => s.setMode);
@@ -21,54 +34,115 @@ export function ImportKeyForm({ password, onSuccess }: ImportKeyFormProps) {
   const setActiveAccount = useStore((s) => s.setActiveAccount);
   const setInitialized = useStore((s) => s.setInitialized);
   const setSecretKey = useStore((s) => s.setSecretKey);
+  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
   const setLocked = useStore((s) => s.setLocked);
+  const setActiveChain = useStore((s) => s.setActiveChain);
 
   const handleImport = async () => {
     if (!privateKey.trim()) {
-      setError('Please enter a private key');
+      setError("Please enter a private key");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const { publicKey, secretKeyBase58 } = importFromPrivateKey(privateKey.trim());
-      await saveKeystore(secretKeyBase58, password);
+      if (chainType === "solana") {
+        const { publicKey, secretKeyBase58 } = importFromPrivateKey(
+          privateKey.trim(),
+        );
+        await saveKeystore(secretKeyBase58, password);
 
-      const account: WalletAccount = {
-        address: publicKey,
-        label: 'Imported Wallet',
-        mode: WalletMode.PrivateKey,
-        createdAt: Date.now(),
-      };
+        const account: WalletAccount = {
+          address: publicKey,
+          evmAddress: null,
+          label: "Imported Wallet",
+          mode: WalletMode.PrivateKey,
+          createdAt: Date.now(),
+        };
 
-      setMode(WalletMode.PrivateKey);
-      addAccount(account);
-      setActiveAccount(account);
-      setSecretKey(secretKeyBase58);
-      setInitialized(true);
-      setLocked(false);
-      onSuccess();
+        setMode(WalletMode.PrivateKey);
+        addAccount(account);
+        setActiveAccount(account);
+        setSecretKey(secretKeyBase58);
+        setInitialized(true);
+        setLocked(false);
+        onSuccess();
+      } else {
+        // EVM private key import
+        const trimmedKey = privateKey.trim();
+        const wallet = new ethers.Wallet(trimmedKey);
+
+        await saveEvmKeystore(trimmedKey, password);
+
+        const account: WalletAccount = {
+          address: "",
+          evmAddress: wallet.address,
+          label: "Imported EVM Wallet",
+          mode: WalletMode.PrivateKey,
+          createdAt: Date.now(),
+        };
+
+        setMode(WalletMode.PrivateKey);
+        addAccount(account);
+        setActiveAccount(account);
+        setEvmPrivateKey(trimmedKey);
+        setActiveChain(ChainId.Ethereum);
+        setInitialized(true);
+        setLocked(false);
+        onSuccess();
+      }
     } catch {
-      setError('Invalid private key. Please check and try again.');
+      setError(
+        chainType === "solana"
+          ? "Invalid private key. Please check and try again."
+          : "Invalid EVM private key. Must be a hex string (0x...).",
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
         <VpnKey color="primary" />
         <Typography variant="h6">Import Private Key</Typography>
       </Box>
+
+      <ToggleButtonGroup
+        value={chainType}
+        exclusive
+        onChange={(_, v) => {
+          if (v) {
+            setChainType(v);
+            setPrivateKey("");
+            setError("");
+          }
+        }}
+        fullWidth
+        size="small"
+      >
+        <ToggleButton value="solana">Solana</ToggleButton>
+        <ToggleButton value="evm">EVM (ETH/Base/Arb)</ToggleButton>
+      </ToggleButtonGroup>
+
+      <Alert severity="info">
+        {chainType === "solana"
+          ? "Importing a Solana private key. You can add an EVM key later in Settings."
+          : "Importing an EVM private key. You can add a Solana key later in Settings."}
+      </Alert>
 
       <TextField
         fullWidth
         multiline
         rows={3}
-        placeholder="Enter your Base58 private key"
+        placeholder={
+          chainType === "solana"
+            ? "Enter your Base58 private key"
+            : "Enter your EVM private key (0x...)"
+        }
         value={privateKey}
         onChange={(e) => setPrivateKey(e.target.value)}
         type="password"
@@ -83,7 +157,7 @@ export function ImportKeyForm({ password, onSuccess }: ImportKeyFormProps) {
         disabled={loading || !privateKey.trim()}
         size="large"
       >
-        {loading ? 'Importing...' : 'Import Wallet'}
+        {loading ? "Importing..." : "Import Wallet"}
       </Button>
     </Box>
   );

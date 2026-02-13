@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store';
 import { useChainProvider } from './useChain';
-import { NATIVE_SOL_MINT } from '@/config/constants';
+import { getNativeMint, isEvmChain } from '@/config/constants';
 import bs58 from 'bs58';
 
 export function useSendTransaction() {
@@ -10,7 +10,9 @@ export function useSendTransaction() {
   const [error, setError] = useState<string | null>(null);
 
   const activeAccount = useStore((s) => s.activeAccount);
+  const activeChainId = useStore((s) => s.activeChainId);
   const secretKeyBase58 = useStore((s) => s.secretKeyBase58);
+  const evmPrivateKey = useStore((s) => s.evmPrivateKey);
   const addToast = useStore((s) => s.addToast);
   const addPending = useStore((s) => s.addPending);
 
@@ -32,21 +34,36 @@ export function useSendTransaction() {
     setTxSignature(null);
 
     try {
-      const secretKey = secretKeyBase58
-        ? bs58.decode(secretKeyBase58)
-        : undefined;
+      const isEvm = isEvmChain(activeChainId);
+      const fromAddress = isEvm
+        ? activeAccount.evmAddress
+        : activeAccount.address;
+
+      if (!fromAddress) {
+        throw new Error('No address available for this chain');
+      }
+
+      // Get the correct secret key as Uint8Array
+      let secretKey: Uint8Array | undefined;
+      if (isEvm && evmPrivateKey) {
+        secretKey = new TextEncoder().encode(evmPrivateKey);
+      } else if (!isEvm && secretKeyBase58) {
+        secretKey = bs58.decode(secretKeyBase58);
+      }
+
+      const nativeMint = getNativeMint(activeChainId);
 
       let sig: string;
-      if (params.mint === NATIVE_SOL_MINT) {
+      if (params.mint === nativeMint) {
         sig = await provider.sendNativeToken({
-          from: activeAccount.address,
+          from: fromAddress,
           to: params.to,
           amount: params.amount,
           secretKey,
         });
       } else {
         sig = await provider.sendToken({
-          from: activeAccount.address,
+          from: fromAddress,
           to: params.to,
           mint: params.mint,
           amount: params.amount,

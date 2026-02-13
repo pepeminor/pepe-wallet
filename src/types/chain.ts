@@ -1,7 +1,8 @@
 export enum ChainId {
   Solana = 'solana',
-  // EVM = 'evm',
-  // TON = 'ton',
+  Ethereum = 'ethereum',
+  Base = 'base',
+  Arbitrum = 'arbitrum',
 }
 
 export enum NetworkType {

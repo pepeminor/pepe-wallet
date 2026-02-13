@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from '@/store';
 import { ChainRegistry } from '@/chains/ChainRegistry';
 import { SolanaProvider } from '@/chains/solana';
+import { EvmProvider } from '@/chains/evm';
 import { ChainId, IChainProvider } from '@/types/chain';
 
 let initialized = false;
@@ -12,6 +13,9 @@ export function useChainInit() {
   useEffect(() => {
     if (!initialized) {
       ChainRegistry.register(ChainId.Solana, new SolanaProvider());
+      ChainRegistry.register(ChainId.Ethereum, new EvmProvider(ChainId.Ethereum));
+      ChainRegistry.register(ChainId.Base, new EvmProvider(ChainId.Base));
+      ChainRegistry.register(ChainId.Arbitrum, new EvmProvider(ChainId.Arbitrum));
       initialized = true;
     }
     ChainRegistry.initializeAll(network);

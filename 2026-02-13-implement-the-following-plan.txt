@@ -1,0 +1,16 @@
+
+ ▐▛███▜▌   Claude Code v2.1.39
+▝▜█████▛▘  Opus 4.6 · Claude Pro
+  ▘▘ ▝▝    ~/Documents/project/vibe-code/learn-to-use-claude-code
+
+✻ Conversation compacted (ctrl+o for history)
+
+
+❯ /compact 
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read src/components/onboarding/ConnectWalletPanel.tsx (64 lines)
+  ⎿  Read public/tokens/usdt.svg (5 lines)
+  ⎿  Read public/tokens/usdc.svg (6 lines)
+  ⎿  Read public/tokens/sol.svg (18 lines)
+  ⎿  Read public/tokens/pepe.svg (5 lines)
+  ⎿  Plan file referenced (~/.claude/plans/soft-jingling-glade.md)
