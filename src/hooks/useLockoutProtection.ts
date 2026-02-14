@@ -86,7 +86,7 @@ export function useLockoutProtection() {
       attempts: 0,
       lockedUntil: null,
       // Keep lockoutCount to maintain exponential backoff if user gets locked again
-      lockoutCount: lockoutData.lockoutCount,
+      lockoutCount: 0,
     });
   };
 

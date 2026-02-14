@@ -56,11 +56,33 @@ export function LockScreen() {
     setLoading(true);
     setError('');
 
+    let decrypted: string | null = null;
+
+    // Verify password first - only this step affects lockout attempts
+    if (hasKeystore()) {
+      try {
+        decrypted = await loadKeystore(password);
+      } catch {
+        recordFailedAttempt();
+
+        const attemptsLeft = Math.max(0, remainingAttempts - 1);
+        if (attemptsLeft > 0) {
+          setError(`Incorrect password. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining.`);
+        } else {
+          setError('Too many failed attempts. Wallet locked.');
+        }
+
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Password correct: clear lockout state immediately
+    reset();
+
     try {
       // Load main keystore (mnemonic or Solana key)
-      if (hasKeystore()) {
-        const decrypted = await loadKeystore(password);
-
+      if (decrypted) {
         if (isMnemonic(decrypted)) {
           // Restore from mnemonic
           const wallet = restoreFromMnemonic(decrypted);
@@ -99,16 +121,9 @@ export function LockScreen() {
       setLocked(false);
       setPassword(''); // Clear password field
       // useBalances hook will automatically fetch when isLocked changes to false
-    } catch {
-      // ✅ SECURITY FIX: Record failed attempt
-      recordFailedAttempt();
-
-      const attemptsLeft = Math.max(0, remainingAttempts - 1);
-      if (attemptsLeft > 0) {
-        setError(`Incorrect password. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining.`);
-      } else {
-        setError('Too many failed attempts. Wallet locked.');
-      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to unlock wallet';
+      setError(msg);
     } finally {
       setLoading(false);
     }

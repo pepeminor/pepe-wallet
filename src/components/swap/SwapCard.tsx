@@ -9,6 +9,9 @@ import { SwapRouteInfo } from './SwapRouteInfo';
 import { TokenSelector } from '@/components/send/TokenSelector';
 import { TokenBalance } from '@/types/token';
 import { secureKeyManager } from '@/services/secureKeyManager';
+import { PasswordConfirmationDialog } from '@/components/common/PasswordConfirmationDialog';
+import { loadKeystore } from '@/services/keystore';
+import { formatBalance } from '@/utils/format';
 
 export function SwapCard() {
   const inputToken = useStore((s) => s.inputToken);
@@ -28,6 +31,7 @@ export function SwapCard() {
 
   const [selectorFor, setSelectorFor] = useState<'input' | 'output' | null>(null);
   const [executing, setExecuting] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const provider = useChainProvider();
 
@@ -42,11 +46,24 @@ export function SwapCard() {
     else if (selectorFor === 'output') setOutputToken(tb.token);
   };
 
-  const handleSwap = async () => {
+  // Handle swap button click - open password dialog
+  const handleSwapClick = () => {
+    setShowPasswordDialog(true);
+  };
+
+  // Handle password confirmation - execute swap
+  const handlePasswordConfirmed = async (password: string) => {
     if (!quote || !activeAccount || !provider) return;
 
     setExecuting(true);
     try {
+      // ✅ SECURITY: Verify password before proceeding with swap
+      try {
+        await loadKeystore(password);
+      } catch {
+        throw new Error('Password verification failed');
+      }
+
       const secretKey = secureKeyManager.hasSolanaKey()
         ? secureKeyManager.getSolanaSecretKey()
         : undefined;
@@ -66,8 +83,10 @@ export function SwapCard() {
       });
 
       addToast({ type: 'success', message: `Swap confirmed! Sig: ${sig.slice(0, 16)}...` });
+      setShowPasswordDialog(false);
     } catch (err: unknown) {
       addToast({ type: 'error', message: err instanceof Error ? err.message : 'Swap failed' });
+      // Keep password dialog open on error so user can retry
     } finally {
       setExecuting(false);
     }
@@ -118,7 +137,7 @@ export function SwapCard() {
         fullWidth
         variant="contained"
         size="large"
-        onClick={handleSwap}
+        onClick={handleSwapClick}
         disabled={!quote || executing || swapLoading}
         sx={{ mt: 1 }}
       >
@@ -133,6 +152,19 @@ export function SwapCard() {
         open={!!selectorFor}
         onClose={() => setSelectorFor(null)}
         onSelect={handleTokenSelect}
+      />
+
+      {/* Password confirmation dialog */}
+      <PasswordConfirmationDialog
+        open={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+        onConfirm={handlePasswordConfirmed}
+        title="Confirm Swap"
+        message={
+          inputToken && outputToken
+            ? `Confirm swapping ${formatBalance(parseFloat(inputAmount))} ${inputToken.symbol} for ${formatBalance(parseFloat(outputAmount))} ${outputToken.symbol}`
+            : 'Confirm this swap transaction.'
+        }
       />
     </Box>
   );

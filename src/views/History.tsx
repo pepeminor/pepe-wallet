@@ -99,9 +99,8 @@ export function HistoryPage() {
               </ListItemIcon>
               <ListItemText
                 primary={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "space-around" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "space-between" }}>
                     <Box
-                    className="transaction-info"
                       sx={{
                         display: "flex",
                         flexDirection: "column",
@@ -168,7 +167,6 @@ export function HistoryPage() {
                     )}
                   </Box>
                 }
-                // secondary={}
               />
             </ListItem>
           ))}

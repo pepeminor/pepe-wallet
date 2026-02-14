@@ -7,6 +7,10 @@ import {
   Typography,
   Alert,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -60,6 +64,10 @@ export function SendForm({ initialMint }: SendFormProps) {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingTx, setPendingTx] = useState<SendFormValues | null>(null);
+  const [pasteConfirmation, setPasteConfirmation] = useState<{
+    address: string;
+    display: string;
+  } | null>(null);
   const { send, sending, txSignature, error } = useSendTransaction();
 
   const maxBalance = selectedToken?.uiBalance ?? 0;
@@ -98,13 +106,14 @@ export function SendForm({ initialMint }: SendFormProps) {
     setConfirmOpen(true);
   };
 
-  const handleConfirmSend = () => {
+  const handleConfirmSend = async (password: string) => {
     if (!selectedToken || !pendingTx) return;
-    send({
+    await send({
       to: pendingTx.recipient,
       amount: parseFloat(pendingTx.amount),
       mint: selectedToken.token.mint,
       decimals: selectedToken.token.decimals,
+      password,
     });
     setConfirmOpen(false);
     setPendingTx(null);
@@ -114,6 +123,33 @@ export function SendForm({ initialMint }: SendFormProps) {
     if (sending) return; // Prevent closing while sending
     setConfirmOpen(false);
     setPendingTx(null);
+  };
+
+  // ✅ SECURITY: Paste address verification (prevents clipboard hijacking)
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Prevent default paste behavior
+
+    const pastedValue = e.clipboardData.getData('text').trim();
+    if (!pastedValue) return;
+
+    // Show confirmation dialog with formatted address
+    setPasteConfirmation({
+      address: pastedValue,
+      display: pastedValue.length > 12
+        ? `${pastedValue.slice(0, 6)}...${pastedValue.slice(-4)}`
+        : pastedValue,
+    });
+  };
+
+  const handleConfirmPaste = () => {
+    if (pasteConfirmation) {
+      setValue('recipient', pasteConfirmation.address, { shouldValidate: true });
+      setPasteConfirmation(null);
+    }
+  };
+
+  const handleCancelPaste = () => {
+    setPasteConfirmation(null);
   };
 
   return (
@@ -160,6 +196,7 @@ export function SendForm({ initialMint }: SendFormProps) {
           control={control}
           fullWidth
           placeholder={isEvm ? '0x address' : 'Solana address'}
+          onPaste={handlePaste}
         />
       </Box>
 
@@ -240,6 +277,66 @@ export function SendForm({ initialMint }: SendFormProps) {
         priceUsd={selectedToken ? prices[selectedToken.token.mint]?.priceUsd ?? 0 : 0}
         sending={sending}
       />
+
+      {/* Paste address confirmation dialog */}
+      <Dialog
+        open={!!pasteConfirmation}
+        onClose={handleCancelPaste}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, mx: 2 },
+        }}
+      >
+        <DialogTitle variant='h6' sx={{ fontWeight: 700 }}>
+          Verify Pasted Address
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 1 }}>
+            <Alert sx={{alignItems:'center'}} severity="warning">
+              Always verify pasted addresses to prevent clipboard hijacking attacks.
+            </Alert>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                You pasted:
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontFamily: 'monospace',
+                  wordBreak: 'break-all',
+                  p: 1.5,
+                  bgcolor: 'action.hover',
+                  borderRadius: 1,
+                }}
+              >
+                {pasteConfirmation?.address}
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              Is this the correct address you intended to send to?
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleCancelPaste}
+            sx={{ borderRadius: 2, py: 1.5 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleConfirmPaste}
+            sx={{ borderRadius: 2, py: 1.5 }}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

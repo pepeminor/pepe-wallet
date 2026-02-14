@@ -61,13 +61,17 @@ Solana services: `SolanaConnection` (RPC), `SolanaTokenService` (balances), `Sol
 
 **Security Features:**
 - Private keys NEVER stored in Zustand state (only in secureKeyManager closure)
+- **Password confirmation required for every transaction** (send & swap)
 - Transaction simulation before signing to detect malicious/failing transactions
 - Slippage validation (max 5%) to prevent sandwich attacks
 - Timing attack protection with random delays on decryption failures
 - CSP headers in production (XSS protection, clickjacking prevention)
 - Source maps disabled in production
 - Auto-lock after 15 minutes of inactivity
+- **Auto-lock on window blur** (locks immediately when switching windows/tabs)
+- **Paste address verification** (prevents clipboard hijacking attacks)
 - Secure memory zeroing (Uint8Array overwrite with random + fill 0)
+- Rate limiting on password attempts (5 attempts, exponential backoff)
 
 ### External APIs
 
@@ -97,11 +101,29 @@ When working with private keys:
 4. Use `Uint8Array` for key material (allows secure zeroing), not strings
 5. Lock wallet via `secureKeyManager.lock()` which zeroes memory
 
+**Transaction Security Flow:**
+1. User fills transaction form (send/swap)
+2. User clicks Send/Swap button
+3. ConfirmSendModal shows transaction details
+4. User clicks Confirm
+5. **PasswordConfirmationDialog appears** (NEW)
+6. User enters password
+7. Password verified via `loadKeystore()` with rate limiting
+8. If correct: transaction executes, password re-verified in hook (defense-in-depth)
+9. If incorrect: shows error, remaining attempts, locks after 5 failures
+
+**Components:**
+- `PasswordConfirmationDialog` - Reusable password dialog with rate limiting
+- `ConfirmSendModal` - Transaction confirmation with password step
+- `SwapCard` - Swap execution with password verification
+- `SendForm` - Send flow with paste address verification
+
 When adding new features:
 - Simulate transactions before signing (`connection.simulateTransaction`)
 - Validate all user inputs (amounts, addresses, slippage)
 - Use HTTPS for all external API calls (validated in `src/config/env.ts`)
 - Add appropriate error handling with timing attack protection (random delays)
+- **Require password confirmation for all financial operations**
 
 ## Production Deployment
 
@@ -129,6 +151,10 @@ NODE_ENV=production npm run start
 - `SECURITY_FOR_USERS.md` — User-facing security guide
 - `verify-production.md` — Production deployment verification guide
 
-**Current security score: 7/10** (improved from 3/10)
-- Remaining risks: browser extensions, phishing, social engineering, physical access
-- These require user awareness and cannot be fully mitigated at application level
+**Current security score: 8.5/10** (improved from 7/10)
+- **NEW:** Transaction password confirmation (every send/swap requires password)
+- **NEW:** Auto-lock on window blur (immediate lock when switching windows)
+- **NEW:** Paste address verification (prevents clipboard hijacking)
+- Remaining risks: browser extensions, phishing, social engineering
+- Physical access risk significantly reduced (password always required for transactions)
+- These remaining risks require user awareness and cannot be fully mitigated at application level

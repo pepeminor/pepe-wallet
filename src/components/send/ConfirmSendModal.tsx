@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,18 +9,18 @@ import {
   Button,
   Box,
   Typography,
-  Divider,
   IconButton,
 } from '@mui/material';
 import { Close, Send as SendIcon } from '@mui/icons-material';
 import { TokenIcon } from '@/components/common/TokenIcon';
 import { formatBalance, formatUsd, calcUsdValue } from '@/utils/format';
 import { TokenBalance } from '@/types/token';
+import { PasswordConfirmationDialog } from '@/components/common/PasswordConfirmationDialog';
 
 interface ConfirmSendModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (password: string) => void | Promise<void>;
   token: TokenBalance | null;
   recipient: string;
   amount: number;
@@ -37,6 +38,8 @@ export function ConfirmSendModal({
   priceUsd,
   sending = false,
 }: ConfirmSendModalProps) {
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+
   if (!token) return null;
 
   const usdValue = calcUsdValue(amount, priceUsd);
@@ -45,6 +48,22 @@ export function ConfirmSendModal({
   const formatAddress = (addr: string) => {
     if (addr.length <= 12) return addr;
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  // Handle send button click - open password dialog
+  const handleSendClick = () => {
+    setShowPasswordDialog(true);
+  };
+
+  // Handle password confirmation - execute transaction
+  const handlePasswordConfirmed = async (password: string) => {
+    try {
+      await onConfirm(password);
+      setShowPasswordDialog(false);
+    } catch {
+      // Error will be shown by the send transaction hook
+      // Keep password dialog open if there was an error
+    }
   };
 
   return (
@@ -157,7 +176,7 @@ export function ConfirmSendModal({
         <Button
           fullWidth
           variant="contained"
-          onClick={onConfirm}
+          onClick={handleSendClick}
           disabled={sending}
           startIcon={<SendIcon />}
           sx={{
@@ -170,6 +189,15 @@ export function ConfirmSendModal({
           {sending ? 'Sending...' : 'Send'}
         </Button>
       </DialogActions>
+
+      {/* Password confirmation dialog */}
+      <PasswordConfirmationDialog
+        open={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+        onConfirm={handlePasswordConfirmed}
+        title="Confirm Send"
+        message={`Confirm sending ${formatBalance(amount)} ${token.token.symbol} to ${formatAddress(recipient)}`}
+      />
     </Dialog>
   );
 }

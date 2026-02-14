@@ -53,6 +53,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const activeChainId = useStore((s) => s.activeChainId);
   const setActiveChain = useStore((s) => s.setActiveChain);
   const setLocked = useStore((s) => s.setLocked);
+  const isLocked = useStore((s) => s.isLocked);
+  const addToast = useStore((s) => s.addToast);
 
   const hasSolana = !!activeAccount?.address;
   const hasEvm = !!activeAccount?.evmAddress;
@@ -62,6 +64,19 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     secureKeyManager.lock();
     setLocked(true);
   };
+
+  // ✅ SECURITY ENHANCEMENT: Auto-lock on window blur (when switching windows/tabs)
+  useEffect(() => {
+    const handleBlur = () => {
+      if (!isLocked) {
+        secureKeyManager.lock();
+        setLocked(true);
+      }
+    };
+
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [isLocked, setLocked, addToast]);
 
   // Auto-correct chain selection if current chain is unavailable
   useEffect(() => {
