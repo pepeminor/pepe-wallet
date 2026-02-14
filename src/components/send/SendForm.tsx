@@ -16,6 +16,7 @@ import { useSendTransaction } from '@/hooks/useSendTransaction';
 import { ValidatedInput } from '@/components/common/ValidatedInput';
 import { TokenSelector } from './TokenSelector';
 import { QrScanner } from './QrScanner';
+import { ConfirmSendModal } from './ConfirmSendModal';
 import { TokenIcon } from '@/components/common/TokenIcon';
 import { TokenBalance } from '@/types/token';
 import { isValidSolanaAddress, isValidEvmAddress } from '@/utils/validation';
@@ -53,11 +54,12 @@ const createSendSchema = (maxBalance: number, isEvm: boolean) =>
 
 export function SendForm({ initialMint }: SendFormProps) {
   const balances = useStore((s) => s.balances);
+  const prices = useStore((s) => s.prices);
   const activeChainId = useStore((s) => s.activeChainId);
-  console.log({activeChainId});
   const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
-  console.log({selectedToken});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingTx, setPendingTx] = useState<SendFormValues | null>(null);
   const { send, sending, txSignature, error } = useSendTransaction();
 
   const maxBalance = selectedToken?.uiBalance ?? 0;
@@ -91,12 +93,27 @@ export function SendForm({ initialMint }: SendFormProps) {
 
   const onSubmit = (data: SendFormValues) => {
     if (!selectedToken) return;
+    // Open confirmation modal instead of sending immediately
+    setPendingTx(data);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmSend = () => {
+    if (!selectedToken || !pendingTx) return;
     send({
-      to: data.recipient,
-      amount: parseFloat(data.amount),
+      to: pendingTx.recipient,
+      amount: parseFloat(pendingTx.amount),
       mint: selectedToken.token.mint,
       decimals: selectedToken.token.decimals,
     });
+    setConfirmOpen(false);
+    setPendingTx(null);
+  };
+
+  const handleCloseConfirm = () => {
+    if (sending) return; // Prevent closing while sending
+    setConfirmOpen(false);
+    setPendingTx(null);
   };
 
   return (
@@ -211,6 +228,17 @@ export function SendForm({ initialMint }: SendFormProps) {
         open={selectorOpen}
         onClose={() => setSelectorOpen(false)}
         onSelect={setSelectedToken}
+      />
+
+      <ConfirmSendModal
+        open={confirmOpen}
+        onClose={handleCloseConfirm}
+        onConfirm={handleConfirmSend}
+        token={selectedToken}
+        recipient={pendingTx?.recipient || ''}
+        amount={parseFloat(pendingTx?.amount || '0')}
+        priceUsd={selectedToken ? prices[selectedToken.token.mint]?.priceUsd ?? 0 : 0}
+        sending={sending}
       />
     </Box>
   );
