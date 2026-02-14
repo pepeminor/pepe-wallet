@@ -25,7 +25,7 @@ export function AmountInput({
   };
 
   return (
-    <Box>
+    <Box sx={{padding: 2,}}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
         <Typography variant="caption" color="text.secondary">
           {label}

@@ -32,7 +32,7 @@ export function SwapTokenInput({
         p: 2,
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between',}}>
         <Typography variant="caption" color="text.secondary">
           {label}
         </Typography>
@@ -45,7 +45,7 @@ export function SwapTokenInput({
           label={token?.symbol ?? 'Select'}
           onClick={onTokenClick}
           size="small"
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', padding: '2px 4px', fontSize: '11px', textTransform: 'uppercase' }}
         />
       </Box>
       <AmountInput

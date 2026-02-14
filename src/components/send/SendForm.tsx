@@ -132,8 +132,8 @@ export function SendForm({ initialMint }: SendFormProps) {
 
       {/* Recipient */}
       <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-          <Typography variant="caption" color="text.secondary">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
             Recipient
           </Typography>
           <QrScanner onScan={(address) => setValue('recipient', address, { shouldValidate: true })} />

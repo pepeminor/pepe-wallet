@@ -25,7 +25,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         Pepe Bag
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Your degen gateway to Web3
+        Gateway to Web3
       </Typography>
       <Box sx={{ width: '100%', maxWidth: 400 }}>{children}</Box>
     </Box>

@@ -7,6 +7,7 @@ export interface WalletSlice {
   accounts: WalletAccount[];
   activeAccount: WalletAccount | null;
   balances: TokenBalance[];
+  balanceCache: Record<string, TokenBalance[]>;
   isLocked: boolean;
   isInitialized: boolean;
   secretKeyBase58: string | null;
@@ -17,6 +18,8 @@ export interface WalletSlice {
   addAccount: (account: WalletAccount) => void;
   setActiveAccount: (account: WalletAccount) => void;
   setBalances: (balances: TokenBalance[]) => void;
+  setChainBalances: (chainId: string, balances: TokenBalance[]) => void;
+  restoreBalancesFromCache: (chainId: string) => void;
   setLocked: (locked: boolean) => void;
   setInitialized: (initialized: boolean) => void;
   setSecretKey: (key: string | null) => void;
@@ -31,6 +34,7 @@ const initialState = {
   accounts: [],
   activeAccount: null,
   balances: [],
+  balanceCache: {} as Record<string, TokenBalance[]>,
   isLocked: true,
   isInitialized: false,
   secretKeyBase58: null,
@@ -48,6 +52,15 @@ export const createWalletSlice: StateCreator<WalletSlice, [], [], WalletSlice> =
     set((state) => ({ accounts: [...state.accounts, account] })),
   setActiveAccount: (account) => set({ activeAccount: account }),
   setBalances: (balances) => set({ balances }),
+  setChainBalances: (chainId, balances) =>
+    set((state) => ({
+      balances,
+      balanceCache: { ...state.balanceCache, [chainId]: balances },
+    })),
+  restoreBalancesFromCache: (chainId) =>
+    set((state) => ({
+      balances: state.balanceCache[chainId] ?? [],
+    })),
   setLocked: (isLocked) => set({ isLocked }),
   setInitialized: (isInitialized) => set({ isInitialized }),
   setSecretKey: (secretKeyBase58) => set({ secretKeyBase58 }),

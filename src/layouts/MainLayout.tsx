@@ -48,7 +48,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const activeAccount = useStore((s) => s.activeAccount);
   const activeChainId = useStore((s) => s.activeChainId);
   const setActiveChain = useStore((s) => s.setActiveChain);
-  const setBalances = useStore((s) => s.setBalances);
 
   const hasSolana = !!activeAccount?.address;
   const hasEvm = !!activeAccount?.evmAddress;
@@ -56,19 +55,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   // Auto-correct chain selection if current chain is unavailable
   useEffect(() => {
     if (!hasSolana && !isEvmChain(activeChainId)) {
-      // Solana selected but no Solana key — switch to Ethereum
-      if (hasEvm) {
-        setActiveChain(ChainId.Ethereum);
-        setBalances([]);
-      }
+      if (hasEvm) setActiveChain(ChainId.Ethereum);
     } else if (!hasEvm && isEvmChain(activeChainId)) {
-      // EVM selected but no EVM key — switch to Solana
-      if (hasSolana) {
-        setActiveChain(ChainId.Solana);
-        setBalances([]);
-      }
+      if (hasSolana) setActiveChain(ChainId.Solana);
     }
-  }, [hasSolana, hasEvm, activeChainId, setActiveChain, setBalances]);
+  }, [hasSolana, hasEvm, activeChainId, setActiveChain]);
 
   const currentNav = NAV_ITEMS.findIndex((item) =>
     pathname.startsWith(item.path),
@@ -80,7 +71,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   const handleChainChange = (chainId: ChainId) => {
     setActiveChain(chainId);
-    setBalances([]); // Clear balances so they refresh for new chain
   };
 
   return (

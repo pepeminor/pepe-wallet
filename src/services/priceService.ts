@@ -20,17 +20,53 @@ const NATIVE_COINGECKO_IDS: Record<ChainId, string> = {
   [ChainId.Arbitrum]: 'ethereum',
 };
 
+// Stablecoins pegged to $1 — skip API calls for these
+const STABLECOIN_SYMBOLS = new Set(['USDT', 'USDC', 'DAI', 'BUSD']);
+
+async function fetchSingleTokenPrice(
+  mint: string,
+  platform: string
+): Promise<number> {
+  try {
+    const { data } = await axios.get(
+      `${COINGECKO_BASE}/simple/token_price/${platform}`,
+      {
+        params: {
+          contract_addresses: mint,
+          vs_currencies: 'usd',
+        },
+      }
+    );
+    const key = mint.toLowerCase();
+    return data[key]?.usd ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function getTokenPrices(
   mints: string[],
-  chainId: ChainId = ChainId.Solana
+  chainId: ChainId = ChainId.Solana,
+  symbols?: Record<string, string>
 ): Promise<TokenPrice[]> {
   if (mints.length === 0) return [];
 
   const nativeMint = chainId === ChainId.Solana ? NATIVE_SOL_MINT : NATIVE_ETH_MINT;
   const hasNative = mints.includes(nativeMint);
-  const contractMints = mints.filter((m) => m !== nativeMint);
 
   const results: TokenPrice[] = [];
+
+  // Separate stablecoins from tokens that need API calls
+  const contractMints: string[] = [];
+  for (const mint of mints) {
+    if (mint === nativeMint) continue;
+    const sym = symbols?.[mint]?.toUpperCase();
+    if (sym && STABLECOIN_SYMBOLS.has(sym)) {
+      results.push({ mint, priceUsd: 1 });
+    } else {
+      contractMints.push(mint);
+    }
+  }
 
   try {
     // Fetch native token price
@@ -45,27 +81,16 @@ export async function getTokenPrices(
       });
     }
 
-    // Fetch ERC-20 / SPL token prices
+    // Fetch contract token prices one at a time (CoinGecko free tier limitation)
     if (contractMints.length > 0) {
       const platform = COINGECKO_PLATFORM[chainId];
-      const { data } = await axios.get(
-        `${COINGECKO_BASE}/simple/token_price/${platform}`,
-        {
-          params: {
-            contract_addresses: contractMints.join(','),
-            // ids: contractMints.join(','),
-            vs_currencies: 'usd',
-          },
-        }
-      );
+      const pricePromises = contractMints.map(async (mint) => {
+        const priceUsd = await fetchSingleTokenPrice(mint, platform);
+        return { mint, priceUsd };
+      });
 
-      for (const mint of contractMints) {
-        const key = mint.toLowerCase();
-        results.push({
-          mint,
-          priceUsd: data[key]?.usd ?? 0,
-        });
-      }
+      const tokenPrices = await Promise.all(pricePromises);
+      results.push(...tokenPrices);
     }
   } catch (err) {
     console.error('Failed to fetch prices:', err);

@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/store';
 import { usePrices } from '@/hooks/usePrices';
 import { TokenIcon } from '@/components/common/TokenIcon';
-import { formatBalance, formatUsd } from '@/utils/format';
+import { formatBalance, formatUsd, calcUsdValue } from '@/utils/format';
 
 export function TokenList() {
   const balances = useStore((s) => s.balances);
@@ -29,7 +29,7 @@ export function TokenList() {
     <List sx={{ px: 1 }}>
       {balances.map((b) => {
         const price = prices[b.token.mint]?.priceUsd ?? 0;
-        const usdValue = b.uiBalance * price;
+        const usdValue = calcUsdValue(b.uiBalance, price);
 
         return (
           <ListItem

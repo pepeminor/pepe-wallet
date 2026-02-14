@@ -32,6 +32,9 @@ export function QrScanner({ onScan }: QrScannerProps) {
         startIcon={<QrCodeScanner />}
         onClick={open}
         size="small"
+        sx={{
+          padding: '8px 12px',
+        }}
       >
         Scan QR
       </Button>

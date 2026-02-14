@@ -8,8 +8,10 @@ import { useStore } from '@/store';
 import { DEFAULT_TOKENS } from '@/config/tokens';
 import { ChainId } from '@/types/chain';
 import { isEvmChain } from '@/config/constants';
+import { useBalances } from '@/hooks/useBalances';
 
 export function SwapPage() {
+  useBalances();
   const params = useParams();
   const inputMint = params?.inputMint as string | undefined;
   const outputMint = params?.outputMint as string | undefined;

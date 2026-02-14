@@ -2,7 +2,7 @@ import { Box, IconButton, Typography } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
 import { useStore } from '@/store';
 import { usePrices } from '@/hooks/usePrices';
-import { formatUsd } from '@/utils/format';
+import { formatUsd, calcUsdValue } from '@/utils/format';
 
 export function BalanceHeader() {
   const balances = useStore((s) => s.balances);
@@ -10,7 +10,7 @@ export function BalanceHeader() {
 
   const totalUsd = balances.reduce((sum, b) => {
     const price = prices[b.token.mint]?.priceUsd ?? 0;
-    return sum + b.uiBalance * price;
+    return sum + calcUsdValue(b.uiBalance, price);
   }, 0);
 
   return (

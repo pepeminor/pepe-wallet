@@ -526,7 +526,7 @@ export function SettingsPage() {
             </>
           ) : (
             <>
-              <Alert severity="warning" sx={{ mt: 1 }}>
+              <Alert severity="warning" sx={{ mt: 0, alignItems: "center" }}>
                 Never share your keys. Anyone with these can access your funds.
               </Alert>
 
@@ -556,7 +556,7 @@ export function SettingsPage() {
             </>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{mx: 2, mb: 2}}>
           {exportedKeys && (
             <Button
               fullWidth
