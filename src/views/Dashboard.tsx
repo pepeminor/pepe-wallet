@@ -3,6 +3,7 @@ import { BalanceHeader } from '@/components/wallet/BalanceHeader';
 import { ActionButtons } from '@/components/wallet/ActionButtons';
 import { TokenList } from '@/components/wallet/TokenList';
 import { TransactionList } from '@/components/wallet/TransactionList';
+import { SecurityWarningBanner } from '@/components/common/SecurityWarningBanner';
 import { useBalances } from '@/hooks/useBalances';
 import { useChainInit } from '@/hooks/useChain';
 
@@ -12,6 +13,11 @@ export function DashboardPage() {
 
   return (
     <Box sx={{ pb: 2 }}>
+      {/* ✅ SECURITY FIX: Warn users about browser extensions */}
+      <Box sx={{ px: 2, pt: 2 }}>
+        <SecurityWarningBanner />
+      </Box>
+
       <BalanceHeader />
       <ActionButtons />
 

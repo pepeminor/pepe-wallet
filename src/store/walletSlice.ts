@@ -11,8 +11,8 @@ export interface WalletSlice {
   lastBalanceFetch: Record<string, number>; // Track last fetch time per chain
   isLocked: boolean;
   isInitialized: boolean;
-  secretKeyBase58: string | null;
-  evmPrivateKey: string | null;
+  // ✅ SECURITY FIX: Private keys removed from state
+  // Keys are now stored securely in secureKeyManager (closure, not state)
   hasExportedKeys: boolean;
 
   setMode: (mode: WalletMode) => void;
@@ -23,8 +23,8 @@ export interface WalletSlice {
   restoreBalancesFromCache: (chainId: string) => void;
   setLocked: (locked: boolean) => void;
   setInitialized: (initialized: boolean) => void;
-  setSecretKey: (key: string | null) => void;
-  setEvmPrivateKey: (key: string | null) => void;
+  // ✅ SECURITY FIX: Removed setSecretKey and setEvmPrivateKey
+  // Use secureKeyManager.unlockSolana() / unlockEvm() instead
   setHasExportedKeys: (exported: boolean) => void;
   updateActiveAccount: (patch: Partial<WalletAccount>) => void;
   reset: () => void;
@@ -39,8 +39,6 @@ const initialState = {
   lastBalanceFetch: {} as Record<string, number>,
   isLocked: true,
   isInitialized: false,
-  secretKeyBase58: null,
-  evmPrivateKey: null,
   hasExportedKeys: false,
 };
 
@@ -66,8 +64,6 @@ export const createWalletSlice: StateCreator<WalletSlice, [], [], WalletSlice> =
     })),
   setLocked: (isLocked) => set({ isLocked }),
   setInitialized: (isInitialized) => set({ isInitialized }),
-  setSecretKey: (secretKeyBase58) => set({ secretKeyBase58 }),
-  setEvmPrivateKey: (evmPrivateKey) => set({ evmPrivateKey }),
   setHasExportedKeys: (hasExportedKeys) => set({ hasExportedKeys }),
   updateActiveAccount: (patch) =>
     set((state) => {

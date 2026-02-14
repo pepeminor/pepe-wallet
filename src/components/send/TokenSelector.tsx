@@ -20,7 +20,7 @@ interface TokenSelectorProps {
 
 export function TokenSelector({ open, onClose, onSelect }: TokenSelectorProps) {
   const balances = useStore((s) => s.balances);
-  console.log(balances);
+  // ✅ SECURITY FIX: Removed console.log to prevent data leakage in production
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">

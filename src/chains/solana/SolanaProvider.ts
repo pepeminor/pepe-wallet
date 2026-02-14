@@ -81,9 +81,17 @@ export class SolanaProvider implements IChainProvider {
     );
 
     tx.feePayer = new PublicKey(from);
-    tx.recentBlockhash = (
-      await this.connection.getLatestBlockhash()
-    ).blockhash;
+    const { blockhash } = await this.connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+
+    // ✅ SECURITY FIX: Simulate transaction before signing
+    const simulation = await this.connection.simulateTransaction(tx, undefined, false);
+
+    if (simulation.value.err) {
+      throw new Error(
+        `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`
+      );
+    }
 
     if (secretKey) {
       const keypair = Keypair.fromSecretKey(secretKey);
@@ -131,9 +139,17 @@ export class SolanaProvider implements IChainProvider {
     );
 
     tx.feePayer = fromPubkey;
-    tx.recentBlockhash = (
-      await this.connection.getLatestBlockhash()
-    ).blockhash;
+    const { blockhash } = await this.connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+
+    // ✅ SECURITY FIX: Simulate transaction before signing
+    const simulation = await this.connection.simulateTransaction(tx, undefined, false);
+
+    if (simulation.value.err) {
+      throw new Error(
+        `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`
+      );
+    }
 
     if (secretKey) {
       const keypair = Keypair.fromSecretKey(secretKey);
@@ -168,6 +184,28 @@ export class SolanaProvider implements IChainProvider {
 
     const swapTxBuf = Buffer.from(swapResult.swapTransaction, 'base64');
     const tx = VersionedTransaction.deserialize(swapTxBuf);
+
+    // ✅ SECURITY FIX: Simulate swap transaction before signing
+    const simulation = await this.connection.simulateTransaction(tx, {
+      sigVerify: false,
+    });
+
+    if (simulation.value.err) {
+      throw new Error(
+        `Swap simulation failed: ${JSON.stringify(simulation.value.err)}`
+      );
+    }
+
+    // Verify simulation succeeded
+    if (!simulation.value.logs || simulation.value.logs.length === 0) {
+      throw new Error('Swap simulation returned no logs - transaction may fail');
+    }
+
+    // Check for common swap errors in logs
+    const logs = simulation.value.logs.join('\n');
+    if (logs.includes('Error:') || logs.includes('failed')) {
+      console.warn('Swap simulation warnings:', logs);
+    }
 
     if (secretKey) {
       const keypair = Keypair.fromSecretKey(secretKey);

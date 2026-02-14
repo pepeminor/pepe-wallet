@@ -47,16 +47,52 @@ export async function decrypt(
   salt: string,
   password: string
 ): Promise<string> {
-  const key = await deriveKey(password, hexToBuf(salt));
-  const dec = new TextDecoder();
+  try {
+    const key = await deriveKey(password, hexToBuf(salt));
+    const dec = new TextDecoder();
 
-  const plainBuf = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: hexToBuf(iv) },
-    key,
-    hexToBuf(ciphertext)
-  );
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: hexToBuf(iv) },
+      key,
+      hexToBuf(ciphertext)
+    );
 
-  return dec.decode(plainBuf);
+    return dec.decode(plainBuf);
+  } catch (error) {
+    // ✅ SECURITY FIX: Add random delay on failure to prevent timing attacks
+    // Delay between 100-150ms to hide timing differences
+    const delay = 100 + Math.random() * 50;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    throw new Error('Decryption failed');
+  }
+}
+
+/**
+ * Decrypt to Uint8Array for secure memory handling
+ * Returns buffer instead of string - caller must zero it after use
+ */
+export async function decryptToBuffer(
+  ciphertext: string,
+  iv: string,
+  salt: string,
+  password: string
+): Promise<Uint8Array> {
+  try {
+    const key = await deriveKey(password, hexToBuf(salt));
+
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: hexToBuf(iv) },
+      key,
+      hexToBuf(ciphertext)
+    );
+
+    return new Uint8Array(plainBuf as ArrayBuffer);
+  } catch (error) {
+    // ✅ SECURITY FIX: Add random delay on failure to prevent timing attacks
+    const delay = 100 + Math.random() * 50;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    throw new Error('Decryption failed');
+  }
 }
 
 function bufToHex(buf: Uint8Array): string {

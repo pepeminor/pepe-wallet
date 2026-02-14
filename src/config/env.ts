@@ -1,4 +1,7 @@
-export const ENV = {
+import { validateRpcUrls } from '@/utils/rpcValidator';
+
+// ✅ SECURITY FIX: Validate all RPC endpoints use HTTPS
+const RAW_ENV = {
   SOLANA_RPC_DEVNET: 'https://api.devnet.solana.com',
   SOLANA_RPC_MAINNET: 'https://solana-rpc.publicnode.com',
   ETHEREUM_RPC: 'https://ethereum-rpc.publicnode.com',
@@ -6,4 +9,7 @@ export const ENV = {
   ARBITRUM_RPC: 'https://arbitrum-one-rpc.publicnode.com',
   JUPITER_API_BASE: 'https://quote-api.jup.ag',
   COINGECKO_API_BASE: 'https://api.coingecko.com/api/v3',
-} as const;
+};
+
+// Validate all URLs on module load
+export const ENV = validateRpcUrls(RAW_ENV, false) as typeof RAW_ENV;

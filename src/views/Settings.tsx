@@ -17,6 +17,8 @@ import {
   TextField,
   Alert,
   IconButton,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import {
   Language,
@@ -48,7 +50,8 @@ import {
 } from "@/services/walletGenerator";
 import { copyToClipboard } from "@/utils/clipboard";
 import { AddressDisplay } from "@/components/common/AddressDisplay";
-import { isEvmChain } from "@/config/constants";
+import { isEvmChain, MIN_SLIPPAGE_BPS, MAX_SLIPPAGE_BPS } from "@/config/constants";
+import { secureKeyManager } from "@/services/secureKeyManager";
 import { ethers } from "ethers";
 
 interface ExportedKeys {
@@ -68,8 +71,7 @@ export function SettingsPage() {
   const reset = useStore((s) => s.reset);
   const addToast = useStore((s) => s.addToast);
   const setHasExportedKeys = useStore((s) => s.setHasExportedKeys);
-  const setSecretKey = useStore((s) => s.setSecretKey);
-  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
+  const setLocked = useStore((s) => s.setLocked);
   const updateActiveAccount = useStore((s) => s.updateActiveAccount);
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -84,6 +86,7 @@ export function SettingsPage() {
   const [slippageInput, setSlippageInput] = useState(
     (slippageBps / 100).toString(),
   );
+  const [exportConfirmed, setExportConfirmed] = useState(false);
 
   // Import missing chain dialog
   const [importChainDialog, setImportChainDialog] = useState<
@@ -105,10 +108,33 @@ export function SettingsPage() {
 
   const handleSlippageChange = () => {
     const val = parseFloat(slippageInput);
-    if (!isNaN(val) && val > 0 && val <= 50) {
-      setSlippage(Math.round(val * 100));
-      addToast({ type: "success", message: `Slippage set to ${val}%` });
+    const minPercent = MIN_SLIPPAGE_BPS / 100;
+    const maxPercent = MAX_SLIPPAGE_BPS / 100;
+
+    if (isNaN(val)) {
+      addToast({ type: "error", message: "Invalid slippage value" });
+      return;
     }
+
+    // ✅ SECURITY FIX: Enforce slippage limits
+    if (val < minPercent || val > maxPercent) {
+      addToast({
+        type: "error",
+        message: `Slippage must be between ${minPercent}% and ${maxPercent}%`
+      });
+      return;
+    }
+
+    // Warn on high slippage
+    if (val > 1) {
+      addToast({
+        type: "warning",
+        message: `High slippage (${val}%) increases risk of value loss from sandwich attacks`
+      });
+    }
+
+    setSlippage(Math.round(val * 100));
+    addToast({ type: "success", message: `Slippage set to ${val}%` });
   };
 
   const handleExportKey = async () => {
@@ -159,6 +185,7 @@ export function SettingsPage() {
     setShowMnemonic(false);
     setShowSolanaKey(false);
     setShowEvmKey(false);
+    setExportConfirmed(false); // Reset confirmation
   };
 
   const handleCopyAll = async () => {
@@ -202,14 +229,26 @@ export function SettingsPage() {
           importKey.trim(),
         );
         await saveKeystore(secretKeyBase58, importPassword);
-        setSecretKey(secretKeyBase58);
+
+        // ✅ SECURITY FIX: Use secure key manager
+        secureKeyManager.unlockSolana(secretKeyBase58);
+        secureKeyManager.setLockCallback(() => {
+          setLocked(true);
+        });
+
         updateActiveAccount({ address: publicKey });
         addToast({ type: "success", message: "Solana key imported" });
       } else if (importChainDialog === "evm") {
         const trimmedKey = importKey.trim();
         const wallet = new ethers.Wallet(trimmedKey);
         await saveEvmKeystore(trimmedKey, importPassword);
-        setEvmPrivateKey(trimmedKey);
+
+        // ✅ SECURITY FIX: Use secure key manager
+        secureKeyManager.unlockEvm(trimmedKey);
+        secureKeyManager.setLockCallback(() => {
+          setLocked(true);
+        });
+
         updateActiveAccount({ evmAddress: wallet.address });
         addToast({ type: "success", message: "EVM key imported" });
       }
@@ -509,19 +548,45 @@ export function SettingsPage() {
         >
           {!exportedKeys ? (
             <>
-              <Typography variant="body2" color="text.secondary">
-                Enter your password to reveal your keys.
-              </Typography>
+              {/* ✅ SECURITY FIX: Stronger export warning */}
+              <Alert severity="error" sx={{ alignItems: "center" }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  ⚠️ CRITICAL SECURITY WARNING
+                </Typography>
+                <Box component="ul" sx={{ pl: 2, mb: 0, '& li': { mb: 0.5 } }}>
+                  <li>Anyone with your private key can <strong>steal ALL your funds</strong></li>
+                  <li>NEVER share your keys with anyone</li>
+                  <li>NEVER screenshot or save digitally</li>
+                  <li>Make sure no one is watching your screen</li>
+                  <li>Check for malicious browser extensions</li>
+                </Box>
+              </Alert>
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={exportConfirmed}
+                    onChange={(e) => setExportConfirmed(e.target.checked)}
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    I understand the risks and have taken security precautions
+                  </Typography>
+                }
+              />
+
               <TextField
                 fullWidth
                 type="password"
                 label="Password"
                 value={exportPassword}
                 onChange={(e) => setExportPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleExportKey()}
+                onKeyDown={(e) => e.key === "Enter" && exportConfirmed && handleExportKey()}
                 error={!!exportError}
                 helperText={exportError}
-                autoFocus
+                disabled={!exportConfirmed}
+                autoFocus={exportConfirmed}
               />
             </>
           ) : (
@@ -572,7 +637,7 @@ export function SettingsPage() {
             <Button
               onClick={handleExportKey}
               variant="contained"
-              disabled={exportLoading || !exportPassword.trim()}
+              disabled={exportLoading || !exportPassword.trim() || !exportConfirmed}
             >
               {exportLoading ? "Decrypting..." : "Reveal"}
             </Button>

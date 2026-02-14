@@ -1,7 +1,13 @@
 import { ChainId } from '@/types/chain';
 
 export const APP_NAME = 'Pepe Bag';
+
+// ✅ SECURITY FIX: Slippage limits to prevent sandwich attacks
+export const MIN_SLIPPAGE_BPS = 1; // 0.01%
+export const MAX_SLIPPAGE_BPS = 500; // 5%
 export const DEFAULT_SLIPPAGE_BPS = 50; // 0.5%
+export const HIGH_SLIPPAGE_WARNING_BPS = 100; // 1% - warn user above this
+
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 export const SOL_DECIMALS = 9;
 export const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';

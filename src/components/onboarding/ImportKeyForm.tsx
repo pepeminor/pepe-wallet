@@ -11,6 +11,7 @@ import {
 import { VpnKey } from "@mui/icons-material";
 import { importFromPrivateKey } from "@/services/walletGenerator";
 import { saveKeystore, saveEvmKeystore } from "@/services/keystore";
+import { secureKeyManager } from "@/services/secureKeyManager";
 import { useStore } from "@/store";
 import { WalletMode, WalletAccount } from "@/types/wallet";
 import { ChainId } from "@/types/chain";
@@ -33,8 +34,6 @@ export function ImportKeyForm({ password, onSuccess }: ImportKeyFormProps) {
   const addAccount = useStore((s) => s.addAccount);
   const setActiveAccount = useStore((s) => s.setActiveAccount);
   const setInitialized = useStore((s) => s.setInitialized);
-  const setSecretKey = useStore((s) => s.setSecretKey);
-  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
   const setLocked = useStore((s) => s.setLocked);
   const setActiveChain = useStore((s) => s.setActiveChain);
 
@@ -65,7 +64,13 @@ export function ImportKeyForm({ password, onSuccess }: ImportKeyFormProps) {
         setMode(WalletMode.PrivateKey);
         addAccount(account);
         setActiveAccount(account);
-        setSecretKey(secretKeyBase58);
+
+        // ✅ SECURITY FIX: Use secure key manager
+        secureKeyManager.unlockSolana(secretKeyBase58);
+        secureKeyManager.setLockCallback(() => {
+          setLocked(true);
+        });
+
         setInitialized(true);
         setLocked(false);
         onSuccess();
@@ -87,7 +92,13 @@ export function ImportKeyForm({ password, onSuccess }: ImportKeyFormProps) {
         setMode(WalletMode.PrivateKey);
         addAccount(account);
         setActiveAccount(account);
-        setEvmPrivateKey(trimmedKey);
+
+        // ✅ SECURITY FIX: Use secure key manager
+        secureKeyManager.unlockEvm(trimmedKey);
+        secureKeyManager.setLockCallback(() => {
+          setLocked(true);
+        });
+
         setActiveChain(ChainId.Ethereum);
         setInitialized(true);
         setLocked(false);

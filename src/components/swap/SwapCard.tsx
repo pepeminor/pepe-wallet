@@ -8,7 +8,7 @@ import { SwapTokenInput } from './SwapTokenInput';
 import { SwapRouteInfo } from './SwapRouteInfo';
 import { TokenSelector } from '@/components/send/TokenSelector';
 import { TokenBalance } from '@/types/token';
-import bs58 from 'bs58';
+import { secureKeyManager } from '@/services/secureKeyManager';
 
 export function SwapCard() {
   const inputToken = useStore((s) => s.inputToken);
@@ -23,7 +23,6 @@ export function SwapCard() {
   const setInputAmount = useStore((s) => s.setInputAmount);
   const flipTokens = useStore((s) => s.flipTokens);
   const activeAccount = useStore((s) => s.activeAccount);
-  const secretKeyBase58 = useStore((s) => s.secretKeyBase58);
   const addToast = useStore((s) => s.addToast);
   const balances = useStore((s) => s.balances);
 
@@ -48,8 +47,8 @@ export function SwapCard() {
 
     setExecuting(true);
     try {
-      const secretKey = secretKeyBase58
-        ? bs58.decode(secretKeyBase58)
+      const secretKey = secureKeyManager.hasSolanaKey()
+        ? secureKeyManager.getSolanaSecretKey()
         : undefined;
 
       const sig = await provider.executeSwap({

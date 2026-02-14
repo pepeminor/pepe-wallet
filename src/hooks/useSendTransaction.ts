@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '@/store';
 import { useChainProvider } from './useChain';
 import { getNativeMint, isEvmChain } from '@/config/constants';
-import bs58 from 'bs58';
+import { secureKeyManager } from '@/services/secureKeyManager';
 
 export function useSendTransaction() {
   const [sending, setSending] = useState(false);
@@ -11,8 +11,6 @@ export function useSendTransaction() {
 
   const activeAccount = useStore((s) => s.activeAccount);
   const activeChainId = useStore((s) => s.activeChainId);
-  const secretKeyBase58 = useStore((s) => s.secretKeyBase58);
-  const evmPrivateKey = useStore((s) => s.evmPrivateKey);
   const addToast = useStore((s) => s.addToast);
   const addPending = useStore((s) => s.addPending);
 
@@ -43,12 +41,12 @@ export function useSendTransaction() {
         throw new Error('No address available for this chain');
       }
 
-      // Get the correct secret key as Uint8Array
+      // Get the correct secret key from secure key manager
       let secretKey: Uint8Array | undefined;
-      if (isEvm && evmPrivateKey) {
-        secretKey = new TextEncoder().encode(evmPrivateKey);
-      } else if (!isEvm && secretKeyBase58) {
-        secretKey = bs58.decode(secretKeyBase58);
+      if (isEvm && secureKeyManager.hasEvmKey()) {
+        secretKey = secureKeyManager.getEvmPrivateKey();
+      } else if (!isEvm && secureKeyManager.hasSolanaKey()) {
+        secretKey = secureKeyManager.getSolanaSecretKey();
       }
 
       const nativeMint = getNativeMint(activeChainId);

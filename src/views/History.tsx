@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -9,26 +9,26 @@ import {
   Chip,
   IconButton,
   Tooltip,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ArrowUpward,
   ArrowDownward,
   SwapHoriz,
   HelpOutline,
   OpenInNew,
-} from '@mui/icons-material';
-import { useStore } from '@/store';
-import { useChainProvider } from '@/hooks/useChain';
-import { TransactionRecord } from '@/types/chain';
-import { formatTimestamp, formatBalance, formatAddress } from '@/utils/format';
-import { NetworkType } from '@/types/chain';
-import { Spinner } from '@/components/common/Spinner';
+} from "@mui/icons-material";
+import { useStore } from "@/store";
+import { useChainProvider } from "@/hooks/useChain";
+import { TransactionRecord } from "@/types/chain";
+import { formatTimestamp, formatBalance, formatAddress } from "@/utils/format";
+import { NetworkType } from "@/types/chain";
+import { Spinner } from "@/components/common/Spinner";
 
 const TYPE_ICONS = {
-  send: <ArrowUpward sx={{ color: 'error.main' }} />,
-  receive: <ArrowDownward sx={{ color: 'success.main' }} />,
-  swap: <SwapHoriz sx={{ color: 'info.main' }} />,
-  unknown: <HelpOutline sx={{ color: 'text.secondary' }} />,
+  send: <ArrowUpward sx={{ color: "error.main" }} />,
+  receive: <ArrowDownward sx={{ color: "success.main" }} />,
+  swap: <SwapHoriz sx={{ color: "info.main" }} />,
+  unknown: <HelpOutline sx={{ color: "text.secondary" }} />,
 };
 
 export function HistoryPage() {
@@ -52,9 +52,9 @@ export function HistoryPage() {
 
   const explorerBase =
     network === NetworkType.Devnet
-      ? 'https://explorer.solana.com/tx/'
-      : 'https://explorer.solana.com/tx/';
-  const clusterParam = network === NetworkType.Devnet ? '?cluster=devnet' : '';
+      ? "https://explorer.solana.com/tx/"
+      : "https://explorer.solana.com/tx/";
+  const clusterParam = network === NetworkType.Devnet ? "?cluster=devnet" : "";
 
   return (
     <Box sx={{ p: 2 }}>
@@ -65,7 +65,7 @@ export function HistoryPage() {
       {loading ? (
         <Spinner message="Loading transactions..." />
       ) : transactions.length === 0 ? (
-        <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+        <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
           No transactions found
         </Typography>
       ) : (
@@ -77,7 +77,7 @@ export function HistoryPage() {
                 borderRadius: 2,
                 mb: 1,
                 border: 1,
-                borderColor: 'divider',
+                borderColor: "divider",
               }}
               secondaryAction={
                 <Tooltip title="View on Explorer">
@@ -99,44 +99,76 @@ export function HistoryPage() {
               </ListItemIcon>
               <ListItemText
                 primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, textTransform: 'capitalize' }}>
-                      {tx.type}
-                    </Typography>
-                    <Chip
-                      label={tx.status}
-                      size="small"
-                      color={
-                        tx.status === 'confirmed'
-                          ? 'success'
-                          : tx.status === 'failed'
-                          ? 'error'
-                          : 'default'
-                      }
-                      sx={{ height: 20, fontSize: '10px' }}
-                    />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "space-around" }}>
+                    <Box
+                    className="transaction-info"
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: 1,
+                          
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 600, textTransform: "capitalize" }}
+                        >
+                          {tx.type}
+                        </Typography>
+                        <Chip
+                          label={tx.status}
+                          size="small"
+                          color={
+                            tx.status === "confirmed"
+                              ? "success"
+                              : tx.status === "failed"
+                                ? "error"
+                                : "default"
+                          }
+                          sx={{ height: 20, fontSize: "10px" }}
+                        />
+                      </Box>
+
+                      <Typography
+                        sx={{
+                          flexDirection: "column",
+                          display: "flex",
+                          alignItems: "start",
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {formatTimestamp(tx.timestamp)}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontFamily: "monospace" }}
+                        >
+                          {formatAddress(tx.signature, 8)}
+                        </Typography>
+                      </Typography>
+                    </Box>
                     {tx.amount !== undefined && (
-                      <Typography variant="body2" sx={{ ml: 'auto', fontWeight: 500 }}>
-                        {tx.type === 'send' ? '-' : '+'}
-                        {formatBalance(tx.amount)} {tx.token ?? ''}
+                      <Typography
+                        variant="body2"
+                        sx={{ textAlign: "center", fontWeight: 500 }}
+                      >
+                        {tx.type === "send" ? "-" : "+"}
+                        {formatBalance(tx.amount)} {tx.token ?? ""}
                       </Typography>
                     )}
                   </Box>
                 }
-                secondary={
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatTimestamp(tx.timestamp)}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ ml: 1, fontFamily: 'monospace' }}
-                    >
-                      {formatAddress(tx.signature, 8)}
-                    </Typography>
-                  </Box>
-                }
+                // secondary={}
               />
             </ListItem>
           ))}

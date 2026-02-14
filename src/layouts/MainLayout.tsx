@@ -12,14 +12,18 @@ import {
   Select,
   MenuItem,
   Stack,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
   SwapHoriz as SwapIcon,
   History as HistoryIcon,
   Settings as SettingsIcon,
+  Lock as LockIcon,
 } from "@mui/icons-material";
 import { useStore } from "@/store";
+import { secureKeyManager } from "@/services/secureKeyManager";
 import { Toast } from "@/components/common/Toast";
 import { ChainId } from "@/types/chain";
 import { CHAIN_CONFIGS } from "@/config/chains";
@@ -48,9 +52,16 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const activeAccount = useStore((s) => s.activeAccount);
   const activeChainId = useStore((s) => s.activeChainId);
   const setActiveChain = useStore((s) => s.setActiveChain);
+  const setLocked = useStore((s) => s.setLocked);
 
   const hasSolana = !!activeAccount?.address;
   const hasEvm = !!activeAccount?.evmAddress;
+
+  // ✅ SECURITY FIX: Lock wallet handler
+  const handleLockWallet = () => {
+    secureKeyManager.lock();
+    setLocked(true);
+  };
 
   // Auto-correct chain selection if current chain is unavailable
   useEffect(() => {
@@ -125,16 +136,35 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               })}
             </Select>
 
-            {displayAddress && (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontFamily: "monospace" }}
-                component={'p'}
-              >
-                {displayAddress.slice(0, 4)}...{displayAddress.slice(-4)}
-              </Typography>
-            )}
+            <Stack direction="row" alignItems="center" gap={1}>
+              {displayAddress && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontFamily: "monospace" }}
+                  component={'p'}
+                >
+                  {displayAddress.slice(0, 4)}...{displayAddress.slice(-4)}
+                </Typography>
+              )}
+
+              {/* ✅ SECURITY FIX: Lock wallet button */}
+              <Tooltip title="Lock Wallet" arrow>
+                <IconButton
+                  size="small"
+                  onClick={handleLockWallet}
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: 'warning.main',
+                      bgcolor: 'action.hover',
+                    },
+                  }}
+                >
+                  <LockIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Stack>
         </Toolbar>
       </AppBar>

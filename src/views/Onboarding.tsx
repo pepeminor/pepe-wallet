@@ -16,6 +16,7 @@ import { ConnectWalletPanel } from '@/components/onboarding/ConnectWalletPanel';
 import { useChainInit } from '@/hooks/useChain';
 import { generateWallet } from '@/services/walletGenerator';
 import { saveKeystore } from '@/services/keystore';
+import { secureKeyManager } from '@/services/secureKeyManager';
 import { useStore } from '@/store';
 import { WalletMode, WalletAccount } from '@/types/wallet';
 
@@ -32,8 +33,6 @@ export function OnboardingPage() {
   const addAccount = useStore((s) => s.addAccount);
   const setActiveAccount = useStore((s) => s.setActiveAccount);
   const setInitialized = useStore((s) => s.setInitialized);
-  const setSecretKey = useStore((s) => s.setSecretKey);
-  const setEvmPrivateKey = useStore((s) => s.setEvmPrivateKey);
   const setLocked = useStore((s) => s.setLocked);
 
   const handleCreatePassword = async (password: string) => {
@@ -53,8 +52,14 @@ export function OnboardingPage() {
       setWalletMode(WalletMode.Generated);
       addAccount(account);
       setActiveAccount(account);
-      setSecretKey(wallet.secretKeyBase58);
-      setEvmPrivateKey(wallet.evmPrivateKey);
+
+      // ✅ SECURITY FIX: Use secure key manager
+      secureKeyManager.unlockSolana(wallet.secretKeyBase58);
+      secureKeyManager.unlockEvm(wallet.evmPrivateKey);
+      secureKeyManager.setLockCallback(() => {
+        setLocked(true);
+      });
+
       setInitialized(true);
       setLocked(false);
       router.replace('/dashboard');

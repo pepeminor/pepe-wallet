@@ -23,18 +23,31 @@ export class SolanaTransactionParser {
       });
     }
 
-    // Batch fetch parsed transactions for type detection
-    const txSigs = signatures.map((s) => s.signature);
+    // ✅ FIX: Fetch transactions one by one to avoid batch request limits
+    // Public RPC nodes only allow 1 transaction per batch request
     try {
-      const parsedTxs = await this.connection.getParsedTransactions(txSigs, {
-        maxSupportedTransactionVersion: 0,
-      });
+      for (let i = 0; i < signatures.length; i++) {
+        try {
+          const tx = await this.connection.getParsedTransaction(
+            signatures[i].signature,
+            {
+              maxSupportedTransactionVersion: 0,
+            }
+          );
 
-      parsedTxs.forEach((tx, i) => {
-        if (!tx) return;
-        const record = records[i];
-        this.classifyTransaction(tx, address, record);
-      });
+          if (tx) {
+            this.classifyTransaction(tx, address, records[i]);
+          }
+
+          // Small delay to avoid rate limiting (20ms between requests)
+          if (i < signatures.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+        } catch (txErr) {
+          console.warn(`Failed to parse transaction ${signatures[i].signature}:`, txErr);
+          // Continue with next transaction
+        }
+      }
     } catch (err) {
       console.error('Failed to parse transactions:', err);
     }

@@ -1,7 +1,12 @@
 import { StateCreator } from 'zustand';
 import { TokenInfo } from '@/types/token';
 import { JupiterQuoteResponse } from '@/types/swap';
-import { DEFAULT_SLIPPAGE_BPS } from '@/config/constants';
+import {
+  DEFAULT_SLIPPAGE_BPS,
+  MIN_SLIPPAGE_BPS,
+  MAX_SLIPPAGE_BPS,
+  HIGH_SLIPPAGE_WARNING_BPS
+} from '@/config/constants';
 
 export interface SwapSlice {
   inputToken: TokenInfo | null;
@@ -41,7 +46,26 @@ export const createSwapSlice: StateCreator<SwapSlice, [], [], SwapSlice> = (
   setOutputToken: (outputToken) => set({ outputToken }),
   setInputAmount: (inputAmount) => set({ inputAmount }),
   setOutputAmount: (outputAmount) => set({ outputAmount }),
-  setSlippage: (slippageBps) => set({ slippageBps }),
+  setSlippage: (slippageBps) => {
+    // ✅ SECURITY FIX: Validate slippage bounds
+    if (slippageBps < MIN_SLIPPAGE_BPS || slippageBps > MAX_SLIPPAGE_BPS) {
+      console.warn(
+        `Slippage must be between ${MIN_SLIPPAGE_BPS/100}% and ${MAX_SLIPPAGE_BPS/100}%. ` +
+        `Received: ${slippageBps/100}%. Using default ${DEFAULT_SLIPPAGE_BPS/100}%.`
+      );
+      set({ slippageBps: DEFAULT_SLIPPAGE_BPS });
+      return;
+    }
+
+    // Warn on high slippage
+    if (slippageBps > HIGH_SLIPPAGE_WARNING_BPS) {
+      console.warn(
+        `High slippage set: ${slippageBps/100}%. Risk of value loss from sandwich attacks.`
+      );
+    }
+
+    set({ slippageBps });
+  },
   setQuote: (quote) => set({ quote }),
   setSwapLoading: (swapLoading) => set({ swapLoading }),
   setSwapError: (swapError) => set({ swapError }),
