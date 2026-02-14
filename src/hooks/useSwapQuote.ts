@@ -15,7 +15,7 @@ export function useSwapQuote() {
 
   const provider = useChainProvider();
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!inputToken || !outputToken || !inputAmount || !provider) {
