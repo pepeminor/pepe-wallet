@@ -9,6 +9,5 @@ export function SendPage() {
   const params = useParams();
   const tokenMint = params?.tokenMint as string | undefined;
 
-  console.log({ tokenMint });
   return <SendForm initialMint={tokenMint} />;
 }

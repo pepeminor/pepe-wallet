@@ -54,6 +54,7 @@ export function LockScreen() {
       }
 
       setLocked(false);
+      // useBalances hook will automatically fetch when isLocked changes to false
     } catch {
       setError('Incorrect password. Please try again.');
     } finally {

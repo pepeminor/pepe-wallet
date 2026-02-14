@@ -34,6 +34,8 @@ export const useStore = create<AppStore>()(
         isLocked: true,
         hasExportedKeys: state.hasExportedKeys,
         activeChainId: state.activeChainId,
+        balanceCache: state.balanceCache,
+        lastBalanceFetch: state.lastBalanceFetch,
         prices: state.prices,
         lastPriceFetch: state.lastPriceFetch,
       }),

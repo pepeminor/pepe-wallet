@@ -4,21 +4,32 @@ import { getTokenPrices } from '@/services/priceService';
 import { PRICE_REFRESH_INTERVAL } from '@/config/constants';
 
 const MANUAL_REFRESH_COOLDOWN = 15_000; // 15s
+const PRICE_STALE_TIME = 10 * 60_000; // 10 minutes
 
 export function usePrices() {
   const balances = useStore((s) => s.balances);
   const activeChainId = useStore((s) => s.activeChainId);
+  const isLocked = useStore((s) => s.isLocked);
   const prices = useStore((s) => s.prices);
+  const lastPriceFetch = useStore((s) => s.lastPriceFetch);
   const setPrices = useStore((s) => s.setPrices);
   const setLastPriceFetch = useStore((s) => s.setLastPriceFetch);
   const fetchingRef = useRef(false);
+  const prevLockedRef = useRef(true); // Init as locked - will trigger fetch on first unlock
   const [refreshing, setRefreshing] = useState(false);
   const [cooldown, setCooldown] = useState(false);
-  // Track which chain was last successfully fetched to avoid refetch on re-render
-  const lastFetchedRef = useRef<string | null>(null);
 
-  const fetchPrices = useCallback(async (mints: string[], symbolMap: Record<string, string>) => {
-    if (fetchingRef.current || mints.length === 0) return;
+  const fetchPrices = useCallback(async (mints: string[], symbolMap: Record<string, string>, force = false) => {
+    if (fetchingRef.current || mints.length === 0 || isLocked) return;
+
+    // Skip if data is fresh (unless forced)
+    if (!force) {
+      const age = Date.now() - lastPriceFetch;
+      if (age < PRICE_STALE_TIME) {
+        return;
+      }
+    }
+
     fetchingRef.current = true;
     try {
       const result = await getTokenPrices(mints, activeChainId, symbolMap);
@@ -28,11 +39,10 @@ export function usePrices() {
       });
       setPrices(map);
       setLastPriceFetch(Date.now());
-      lastFetchedRef.current = activeChainId;
     } finally {
       fetchingRef.current = false;
     }
-  }, [setPrices, setLastPriceFetch, activeChainId]);
+  }, [setPrices, setLastPriceFetch, activeChainId, isLocked, lastPriceFetch]);
 
   // Build mints + symbol map from balances
   const getMintData = useCallback(() => {
@@ -52,40 +62,43 @@ export function usePrices() {
 
     setRefreshing(true);
     setCooldown(true);
-    await fetchPrices(mints, symbolMap);
+    await fetchPrices(mints, symbolMap, true); // force=true
     setRefreshing(false);
     setTimeout(() => setCooldown(false), MANUAL_REFRESH_COOLDOWN);
   }, [cooldown, fetchPrices, getMintData]);
 
-  // Fetch when chain changes or balances load — retry if previous attempt was blocked
+  // On unlock: force fetch fresh prices
   useEffect(() => {
+    if (prevLockedRef.current && !isLocked) {
+      // Just unlocked - force fetch
+      const { mints, symbolMap } = getMintData();
+      if (mints.length > 0) {
+        fetchPrices(mints, symbolMap, true);
+      }
+    }
+    prevLockedRef.current = isLocked;
+  }, [isLocked, fetchPrices, getMintData]);
+
+  // Background polling - only fetch if data is stale
+  useEffect(() => {
+    if (isLocked) return;
+
     const { mints, symbolMap } = getMintData();
     if (mints.length === 0) return;
-    if (lastFetchedRef.current === activeChainId) return;
 
-    // Small delay to avoid racing with in-flight fetches from the previous chain
-    const timer = setTimeout(() => {
-      fetchPrices(mints, symbolMap);
-    }, 200);
+    // Check immediately if we need to fetch
+    fetchPrices(mints, symbolMap);
 
-    return () => clearTimeout(timer);
-  }, [balances, activeChainId, fetchPrices, getMintData]);
-
-  // Background refresh every 15 min
-  useEffect(() => {
+    // Then check periodically
     const interval = setInterval(() => {
-      const { mints, symbolMap } = getMintData();
-      if (mints.length === 0) return;
-      lastFetchedRef.current = null; // allow re-fetch
-      fetchPrices(mints, symbolMap);
+      const { mints: currentMints, symbolMap: currentSymbolMap } = getMintData();
+      if (currentMints.length > 0) {
+        fetchPrices(currentMints, currentSymbolMap);
+      }
     }, PRICE_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchPrices, getMintData]);
 
-  // Reset lastFetchedRef when chain changes so we fetch for the new chain
-  useEffect(() => {
-    lastFetchedRef.current = null;
-  }, [activeChainId]);
+    return () => clearInterval(interval);
+  }, [fetchPrices, getMintData, isLocked]);
 
   return { prices, refresh, refreshing, cooldown };
 }

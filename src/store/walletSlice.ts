@@ -8,6 +8,7 @@ export interface WalletSlice {
   activeAccount: WalletAccount | null;
   balances: TokenBalance[];
   balanceCache: Record<string, TokenBalance[]>;
+  lastBalanceFetch: Record<string, number>; // Track last fetch time per chain
   isLocked: boolean;
   isInitialized: boolean;
   secretKeyBase58: string | null;
@@ -35,6 +36,7 @@ const initialState = {
   activeAccount: null,
   balances: [],
   balanceCache: {} as Record<string, TokenBalance[]>,
+  lastBalanceFetch: {} as Record<string, number>,
   isLocked: true,
   isInitialized: false,
   secretKeyBase58: null,
@@ -56,6 +58,7 @@ export const createWalletSlice: StateCreator<WalletSlice, [], [], WalletSlice> =
     set((state) => ({
       balances,
       balanceCache: { ...state.balanceCache, [chainId]: balances },
+      lastBalanceFetch: { ...state.lastBalanceFetch, [chainId]: Date.now() },
     })),
   restoreBalancesFromCache: (chainId) =>
     set((state) => ({

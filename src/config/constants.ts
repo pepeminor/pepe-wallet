@@ -12,7 +12,7 @@ export const KEYSTORE_KEY = 'sol_wallet_keystore';
 export const KEYSTORE_EVM_KEY = 'evm_wallet_keystore';
 export const PASSWORD_SALT_KEY = 'sol_wallet_salt';
 export const PRICE_REFRESH_INTERVAL = 15 * 60_000; // 15 minutes
-export const BALANCE_REFRESH_INTERVAL = 60_000; // 1 minute
+export const BALANCE_REFRESH_INTERVAL = 5 * 60_000; // 5 minutes (reduced from 1 min to avoid spam)
 
 export const EVM_CHAIN_IDS: ChainId[] = [
   ChainId.Ethereum,
